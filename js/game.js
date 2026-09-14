@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-events1";
+  const BUILD = "20260914-events2";
 
   // Supprime totalement le flash/tap highlight natif Android/Chrome sur l'interface.
   // Le focus clavier reste géré séparément avec :focus-visible dans les CSS du jeu.
@@ -193,7 +193,7 @@
   }
 
   async function boot() {
-    if ((Number(window.NightIdleConfig?.version) || 0) < 11) {
+    if ((Number(window.NightIdleConfig?.version) || 0) < 12) {
       try {
         await loadScript("js/config.js");
       } catch (error) {
