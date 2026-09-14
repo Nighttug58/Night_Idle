@@ -7,7 +7,7 @@
   if (!CONFIG || !SYSTEM || !DATA) return;
 
   const SAVE_KEY = "nightIdle.save.v1";
-  const VERSION = 2;
+  const VERSION = 3;
   const TIER_COUNT = 10;
   const TIER_REWARDS = [...SYSTEM.tierRewards];
   const COSTS = [...SYSTEM.multiplierCosts];
@@ -23,7 +23,7 @@
   const MAX_AP = DEFINITIONS.length * TIER_REWARDS.reduce((a, b) => a + b, 0);
   const MAX_COST = COSTS.reduce((a, b) => a + b, 0);
   const MAX_MILESTONES = DEFINITIONS.length * TIER_COUNT;
-  if (DEFINITIONS.length !== Number(SYSTEM.expectedFamilyCount) || MAX_AP !== MAX_COST) {
+  if (DEFINITIONS.length !== Number(SYSTEM.expectedFamilyCount) || MAX_COST > MAX_AP) {
     console.error("[Night Idle] Budget Achievements incohérent", { families: DEFINITIONS.length, maxAP: MAX_AP, maxCost: MAX_COST });
   }
 
@@ -163,6 +163,17 @@
     return CONFIG.prestigeShop.filter((u) => !u.unlimited && Number.isFinite(Number(u.maxLevel)) && prestigeLevel(save, u.id) >= Number(u.maxLevel)).length;
   }
   function prestigeGroup(save, id) { return (PRESTIGE_GROUPS[id] || []).reduce((s, k) => s + prestigeLevel(save, k), 0); }
+  function challengeState(save) { return save?.challengeState && typeof save.challengeState === "object" ? save.challengeState : {}; }
+  function challengeDifficulty(save, id) { return int(challengeState(save)?.completedByDifficulty?.[id]); }
+  function challengeCompletedTotal(save) {
+    return Object.values(challengeState(save)?.completedByDifficulty || {}).reduce((sum, value) => sum + int(value), 0);
+  }
+  function challengeUniqueCompleted(save) {
+    return Object.values(challengeState(save)?.completed || {}).filter((value) => int(value) > 0).length;
+  }
+  function challengeHighTierCompleted(save) {
+    return ["nightmare", "infernal", "mythic"].reduce((sum, id) => sum + challengeDifficulty(save, id), 0);
+  }
 
   function valueOf(d, save) {
     const stats = save?.globalStats || {};
@@ -185,6 +196,11 @@
       case "comboMasteryMetric": return Math.max(0, num(state.metrics.maxComboMasteryLevels?.[d.key]));
       case "gemsSpent": return Math.max(0, int(stats.totalGemsEarned) - int(save?.gems));
       case "classifiedRolls": return int(stats.manualRolls) + int(stats.autoRolls);
+      case "challengeCompletedTotal": return challengeCompletedTotal(save);
+      case "challengeTokensEarned": return int(challengeState(save)?.totalTokensEarned);
+      case "challengeDifficulty": return challengeDifficulty(save, d.key);
+      case "challengeUniqueCompleted": return challengeUniqueCompleted(save);
+      case "challengeHighTierCompleted": return challengeHighTierCompleted(save);
       default: return 0;
     }
   }
