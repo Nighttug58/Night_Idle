@@ -22,7 +22,14 @@
     upgradesButton: $("upgradesButton"),
     upgradesModal: $("upgradesModal"),
     closeUpgrades: $("closeUpgradesButton"),
-    upgrades: $("upgradesList"),
+    upgradesBalance: $("upgradesBalanceValue"),
+    generalUpgradesTab: $("generalUpgradesTab"),
+    comboMasteriesTab: $("comboMasteriesTab"),
+    generalUpgradesPanel: $("generalUpgradesPanel"),
+    comboMasteriesPanel: $("comboMasteriesPanel"),
+    generalUpgrades: $("generalUpgradesList"),
+    comboUpgrades: $("comboUpgradesList"),
+    upgradesScroll: document.querySelector(".upgrade-tabs-body"),
     rolls: $("totalRollsValue"),
     earned: $("totalEarnedValue"),
     best: $("bestGainValue"),
@@ -37,6 +44,10 @@
     return Object.fromEntries(CONFIG.combos.map((combo) => [combo.id, 0]));
   }
 
+  function defaultComboUnlocks() {
+    return Object.fromEntries(CONFIG.combos.map((combo) => [combo.id, false]));
+  }
+
   const freshState = () => ({
     points: 0,
     diceCount: 1,
@@ -46,7 +57,8 @@
     lastRoll: [],
     lastResult: null,
     upgrades: defaultUpgradeLevels(),
-    comboUpgrades: defaultComboUpgradeLevels()
+    comboUpgrades: defaultComboUpgradeLevels(),
+    comboUnlocks: defaultComboUnlocks()
   });
 
   function load() {
@@ -55,12 +67,22 @@
       if (!saved) return freshState();
 
       const base = freshState();
+      const comboUpgrades = { ...base.comboUpgrades, ...(saved.comboUpgrades || {}) };
+      const comboUnlocks = { ...base.comboUnlocks, ...(saved.comboUnlocks || {}) };
+
+      // Migration douce : une maîtrise déjà achetée dans une ancienne sauvegarde
+      // implique que la combinaison correspondante reste débloquée.
+      CONFIG.combos.forEach((combo) => {
+        if ((Number(comboUpgrades[combo.id]) || 0) > 0) comboUnlocks[combo.id] = true;
+      });
+
       return {
         ...base,
         ...saved,
         diceCount: Math.max(1, Math.min(CONFIG.maxDice, Number(saved.diceCount) || 1)),
         upgrades: { ...base.upgrades, ...(saved.upgrades || {}) },
-        comboUpgrades: { ...base.comboUpgrades, ...(saved.comboUpgrades || {}) }
+        comboUpgrades,
+        comboUnlocks
       };
     } catch {
       return freshState();
@@ -68,6 +90,7 @@
   }
 
   let state = load();
+  let activeUpgradeTab = "general";
 
   function save() {
     localStorage.setItem(SAVE_KEY, JSON.stringify(state));
@@ -85,12 +108,20 @@
     return CONFIG.upgrades.find((upgrade) => upgrade.id === id);
   }
 
+  function comboById(id) {
+    return CONFIG.combos.find((combo) => combo.id === id);
+  }
+
   function upgradeLevel(id) {
     return Math.max(0, Number(state.upgrades[id]) || 0);
   }
 
   function comboUpgradeLevel(id) {
     return Math.max(0, Number(state.comboUpgrades[id]) || 0);
+  }
+
+  function comboUnlocked(id) {
+    return state.comboUnlocks[id] === true;
   }
 
   function upgradeCost(upgrade) {
@@ -115,7 +146,7 @@
   }
 
   function comboMultiplier(combo) {
-    if (!combo) return 1;
+    if (!combo || !comboUnlocked(combo.id)) return 1;
     const globalMastery = upgradeFactor("combo_mastery");
     const individualMastery = 1 + comboUpgradeLevel(combo.id) * CONFIG.comboUpgrade.effectPerLevel;
     return combo.multiplier * globalMastery * individualMastery;
@@ -148,12 +179,13 @@
     return false;
   }
 
-  function bestCombo(values) {
+  function comboMatches(values) {
     const counts = countsOf(values);
     const groups = [...counts.values()];
     const pairGroups = groups.filter((n) => n >= 2).length;
     const tripleGroups = groups.filter((n) => n >= 3).length;
-    const match = {
+
+    return {
       pair: pairGroups >= 1,
       double_pair: pairGroups >= 2,
       triple_pair: pairGroups >= 3,
@@ -167,9 +199,16 @@
       straight_5: hasStraight(counts, 5),
       straight_6: hasStraight(counts, 6)
     };
+  }
 
+  function bestCombo(values) {
+    const match = comboMatches(values);
     return CONFIG.combos
-      .filter((combo) => values.length >= combo.minDice && match[combo.id])
+      .filter((combo) =>
+        values.length >= combo.minDice &&
+        comboUnlocked(combo.id) &&
+        match[combo.id]
+      )
       .sort((a, b) => comboMultiplier(b) - comboMultiplier(a))[0] || null;
   }
 
@@ -216,6 +255,17 @@
     render(false);
   }
 
+  function buyComboUnlock(id) {
+    const combo = comboById(id);
+    if (!combo || comboUnlocked(id) || state.diceCount < combo.minDice) return;
+    if (state.points < combo.unlockCost) return;
+
+    state.points -= combo.unlockCost;
+    state.comboUnlocks[id] = true;
+    save();
+    render(false);
+  }
+
   function buyUpgrade(id) {
     const upgrade = generalUpgrade(id);
     if (!upgrade) return;
@@ -229,8 +279,8 @@
   }
 
   function buyComboUpgrade(id) {
-    const combo = CONFIG.combos.find((entry) => entry.id === id);
-    if (!combo || state.diceCount < combo.minDice) return;
+    const combo = comboById(id);
+    if (!combo || !comboUnlocked(id)) return;
     const cost = comboUpgradeCost(combo);
     if (state.points < cost) return;
 
@@ -280,16 +330,50 @@
     }
   }
 
+  function makeComboRow(combo) {
+    const hasDice = state.diceCount >= combo.minDice;
+    const unlocked = comboUnlocked(combo.id);
+    const affordable = hasDice && !unlocked && state.points >= combo.unlockCost;
+    const row = document.createElement("article");
+    row.className = `combo-row${unlocked ? " is-unlocked" : " is-locked"}`;
+
+    const details = document.createElement("div");
+    details.className = "combo-details";
+    details.innerHTML = `
+      <div class="combo-title-line">
+        <strong class="combo-name">${combo.name}</strong>
+        <span class="combo-example">${combo.example}</span>
+      </div>
+      <div class="combo-meta">
+        <span class="combo-multiplier">×${fmt(unlocked ? comboMultiplier(combo) : combo.multiplier)}</span>
+        <span>${unlocked ? "Actif" : hasDice ? "À débloquer" : `${combo.minDice} dés requis`}</span>
+        <span>Prix : ${fmt(combo.unlockCost)} pts</span>
+      </div>
+    `;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "combo-unlock-buy";
+    button.disabled = unlocked || !affordable;
+
+    if (unlocked) {
+      button.innerHTML = `<span>DÉBLOQUÉ</span><strong>✓</strong>`;
+    } else if (!hasDice) {
+      button.innerHTML = `<span>VERROUILLÉ</span><strong>${combo.minDice} dés</strong>`;
+    } else {
+      button.innerHTML = `<span>DÉBLOQUER</span><strong>${fmt(combo.unlockCost)} pts</strong>`;
+    }
+
+    button.addEventListener("click", () => buyComboUnlock(combo.id));
+    row.append(details, button);
+    return row;
+  }
+
   function renderCombos() {
+    const scrollTop = ui.combos.scrollTop;
     ui.combos.replaceChildren();
-    CONFIG.combos.forEach((combo) => {
-      const unlocked = state.diceCount >= combo.minDice;
-      const row = document.createElement("div");
-      row.className = `combo-row${unlocked ? "" : " is-locked"}`;
-      row.innerHTML = `<span class="combo-name">${combo.name}</span><span class="combo-example">${combo.example}</span><span class="combo-multiplier">×${fmt(comboMultiplier(combo))}</span>`;
-      if (!unlocked) row.title = `Disponible à partir de ${combo.minDice} dés`;
-      ui.combos.appendChild(row);
-    });
+    CONFIG.combos.forEach((combo) => ui.combos.appendChild(makeComboRow(combo)));
+    ui.combos.scrollTop = scrollTop;
   }
 
   function effectLabel(upgrade, next = false) {
@@ -328,7 +412,7 @@
   }
 
   function makeComboUpgradeCard(combo) {
-    const unlocked = state.diceCount >= combo.minDice;
+    const unlocked = comboUnlocked(combo.id);
     const level = comboUpgradeLevel(combo.id);
     const cost = comboUpgradeCost(combo);
     const affordable = unlocked && state.points >= cost;
@@ -344,7 +428,7 @@
         <strong>${combo.name}</strong>
         <span>Niv. ${level}</span>
       </div>
-      <p>${unlocked ? `Multiplicateur actuel : ×${fmt(comboMultiplier(combo))}` : `Débloqué avec ${combo.minDice} dés`}</p>
+      <p>${unlocked ? `Multiplicateur actuel : ×${fmt(comboMultiplier(combo))}` : "Débloque d'abord cette combinaison dans COMBOS."}</p>
       <div class="upgrade-effect">Bonus propre ×${fmt(currentOwnFactor)} → <strong>×${fmt(nextOwnFactor)}</strong></div>
     `;
 
@@ -354,7 +438,7 @@
     button.disabled = !affordable;
     button.innerHTML = unlocked
       ? `<span>AMÉLIORER</span><strong>${fmt(cost)} pts</strong>`
-      : `<span>VERROUILLÉ</span><strong>${combo.minDice} dés</strong>`;
+      : `<span>COMBO</span><strong>VERROUILLÉ</strong>`;
     button.addEventListener("click", () => buyComboUpgrade(combo.id));
 
     card.append(info, button);
@@ -362,32 +446,29 @@
   }
 
   function renderUpgrades() {
-    ui.upgrades.replaceChildren();
+    const scrollTop = ui.upgradesScroll.scrollTop;
+    ui.upgradesBalance.textContent = fmt(state.points);
 
-    const balance = document.createElement("div");
-    balance.className = "upgrade-balance";
-    balance.innerHTML = `<span>Points disponibles</span><strong>${fmt(state.points)}</strong>`;
-    ui.upgrades.appendChild(balance);
+    ui.generalUpgrades.replaceChildren();
+    CONFIG.upgrades.forEach((upgrade) => ui.generalUpgrades.appendChild(makeUpgradeCard(upgrade)));
 
-    const generalTitle = document.createElement("div");
-    generalTitle.className = "upgrade-section-title";
-    generalTitle.textContent = "Améliorations générales";
-    ui.upgrades.appendChild(generalTitle);
+    ui.comboUpgrades.replaceChildren();
+    CONFIG.combos.forEach((combo) => ui.comboUpgrades.appendChild(makeComboUpgradeCard(combo)));
 
-    const generalList = document.createElement("div");
-    generalList.className = "upgrade-stack";
-    CONFIG.upgrades.forEach((upgrade) => generalList.appendChild(makeUpgradeCard(upgrade)));
-    ui.upgrades.appendChild(generalList);
+    ui.upgradesScroll.scrollTop = scrollTop;
+  }
 
-    const comboTitle = document.createElement("div");
-    comboTitle.className = "upgrade-section-title";
-    comboTitle.textContent = "Maîtrises individuelles";
-    ui.upgrades.appendChild(comboTitle);
+  function setUpgradeTab(tab) {
+    activeUpgradeTab = tab === "masteries" ? "masteries" : "general";
+    const showGeneral = activeUpgradeTab === "general";
 
-    const comboList = document.createElement("div");
-    comboList.className = "upgrade-stack";
-    CONFIG.combos.forEach((combo) => comboList.appendChild(makeComboUpgradeCard(combo)));
-    ui.upgrades.appendChild(comboList);
+    ui.generalUpgradesPanel.hidden = !showGeneral;
+    ui.comboMasteriesPanel.hidden = showGeneral;
+    ui.generalUpgradesTab.classList.toggle("is-active", showGeneral);
+    ui.comboMasteriesTab.classList.toggle("is-active", !showGeneral);
+    ui.generalUpgradesTab.setAttribute("aria-selected", String(showGeneral));
+    ui.comboMasteriesTab.setAttribute("aria-selected", String(!showGeneral));
+    ui.upgradesScroll.scrollTop = 0;
   }
 
   function render(animate) {
@@ -417,14 +498,19 @@
   }
 
   ui.roll.addEventListener("click", roll);
+  ui.generalUpgradesTab.addEventListener("click", () => setUpgradeTab("general"));
+  ui.comboMasteriesTab.addEventListener("click", () => setUpgradeTab("masteries"));
   bindModal(ui.combosButton, ui.combosModal, ui.closeCombos);
   bindModal(ui.upgradesButton, ui.upgradesModal, ui.closeUpgrades);
   ui.reset.addEventListener("click", () => {
     if (!window.confirm("Réinitialiser toute la progression ?")) return;
     state = freshState();
+    activeUpgradeTab = "general";
+    setUpgradeTab(activeUpgradeTab);
     save();
     render(false);
   });
 
+  setUpgradeTab(activeUpgradeTab);
   render(false);
 })();
