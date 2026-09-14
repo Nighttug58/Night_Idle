@@ -3,6 +3,18 @@
 
   const BUILD = "20260914-mainui5";
 
+  // Chrome/Android ajoute par défaut un flash bleu sur les zones tactiles.
+  // On le supprime sans toucher au focus-visible clavier défini dans styles.css.
+  const tapStyle = document.createElement("style");
+  tapStyle.textContent = `
+    button,
+    [role="button"] {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+  `;
+  document.head.appendChild(tapStyle);
+
   function loadScript(src) {
     return new Promise((resolve, reject) => {
       const script = document.createElement("script");
