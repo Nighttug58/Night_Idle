@@ -144,43 +144,60 @@
         <button id="closePrestigeButton" class="modal-close" type="button" aria-label="Fermer">×</button>
       </div>
 
-      <div class="prestige-content">
-        <div class="prestige-summary">
-          <div>
-            <span>Gemmes actuelles</span>
-            <strong id="prestigeCurrentGems">0</strong>
+      <div class="modal-tabs prestige-tabs" role="tablist" aria-label="Sections du Prestige">
+        <button id="prestigeInfoTab" class="modal-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="prestigeInfoPanel">PRESTIGE</button>
+        <button id="prestigeShopTab" class="modal-tab" type="button" role="tab" aria-selected="false" aria-controls="prestigeShopPanel">BOUTIQUE</button>
+      </div>
+
+      <div class="prestige-tabs-body modal-scroll">
+        <section id="prestigeInfoPanel" class="prestige-tab-panel" role="tabpanel" aria-labelledby="prestigeInfoTab">
+          <div class="prestige-content">
+            <div class="prestige-summary">
+              <div>
+                <span>Gemmes actuelles</span>
+                <strong id="prestigeCurrentGems">0</strong>
+              </div>
+              <div>
+                <span>Prestiges</span>
+                <strong id="prestigeCountValue">0</strong>
+              </div>
+            </div>
+
+            <div class="prestige-requirements">
+              <div class="prestige-requirement">
+                <span>6 dés requis</span>
+                <strong id="prestigeDiceStatus">1/6</strong>
+              </div>
+              <div class="prestige-requirement">
+                <span>Tous les combos requis</span>
+                <strong id="prestigeCombosStatus">0/12</strong>
+              </div>
+            </div>
+
+            <div class="prestige-run-total">
+              <span>Points gagnés pendant ce run</span>
+              <strong id="prestigeRunPointsValue">0</strong>
+            </div>
+
+            <div class="prestige-reward">
+              <span>Prestige maintenant</span>
+              <strong id="prestigeRewardValue">+0 Gemme</strong>
+            </div>
+
+            <p class="prestige-formula">Gain : ⌊5 × √(points du run / 1 000 000)⌋ Gemmes.</p>
+            <p class="prestige-warning">Le Prestige remet à zéro les points, dés, combos, améliorations et statistiques du run. Les Gemmes et améliorations Prestige sont conservées.</p>
+
+            <button id="confirmPrestigeButton" class="primary-button prestige-confirm" type="button" disabled>PRESTIGE VERROUILLÉ</button>
           </div>
-          <div>
-            <span>Prestiges</span>
-            <strong id="prestigeCountValue">0</strong>
+        </section>
+
+        <section id="prestigeShopPanel" class="prestige-tab-panel" role="tabpanel" aria-labelledby="prestigeShopTab" hidden>
+          <div class="prestige-shop-balance">
+            <span>Gemmes disponibles</span>
+            <strong id="prestigeShopGemsValue">0</strong>
           </div>
-        </div>
-
-        <div class="prestige-requirements">
-          <div class="prestige-requirement">
-            <span>6 dés requis</span>
-            <strong id="prestigeDiceStatus">1/6</strong>
-          </div>
-          <div class="prestige-requirement">
-            <span>Tous les combos requis</span>
-            <strong id="prestigeCombosStatus">0/12</strong>
-          </div>
-        </div>
-
-        <div class="prestige-run-total">
-          <span>Points gagnés pendant ce run</span>
-          <strong id="prestigeRunPointsValue">0</strong>
-        </div>
-
-        <div class="prestige-reward">
-          <span>Prestige maintenant</span>
-          <strong id="prestigeRewardValue">+0 Gemme</strong>
-        </div>
-
-        <p class="prestige-formula">Gain : ⌊5 × √(points du run / 1 000 000)⌋ Gemmes.</p>
-        <p class="prestige-warning">Le Prestige remet à zéro les points, dés, combos, améliorations et statistiques du run. Les Gemmes sont conservées.</p>
-
-        <button id="confirmPrestigeButton" class="primary-button prestige-confirm" type="button" disabled>PRESTIGE VERROUILLÉ</button>
+          <div id="prestigeShopList" class="prestige-shop-list"></div>
+        </section>
       </div>
     </div>
   </dialog>
