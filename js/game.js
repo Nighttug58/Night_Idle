@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-mutations1";
+  const BUILD = "20260914-challenge-achievements1";
 
   const tapStyle = document.createElement("style");
   tapStyle.textContent = `
@@ -202,7 +202,7 @@
   }
 
   async function boot() {
-    if ((Number(window.NightIdleConfig?.version) || 0) < 15) {
+    if ((Number(window.NightIdleConfig?.version) || 0) < 16) {
       try {
         await loadScript("js/config.js");
       } catch (error) {
