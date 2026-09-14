@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-mainui4";
+  const BUILD = "20260914-mainui5";
 
   function loadScript(src) {
     return new Promise((resolve, reject) => {
