@@ -16,9 +16,10 @@
     BASE_CONFIG.upgrades.map((upgrade) => [upgrade.id, Number(upgrade.costGrowth) || 1])
   );
   const baseComboGrowth = Number(BASE_CONFIG.comboUpgrade.costGrowth) || 1;
+  const targetGrowth = Math.max(1, Number(mastery.targetGrowth) || 1.10);
 
-  // Les objets internes restent volontairement mutables : game-core capture CONFIG une seule fois,
-  // puis cette couche peut mettre à jour les courbes immédiatement après un achat Prestige.
+  // game-core capture NightIdleConfig une seule fois. On fournit donc des objets runtime
+  // mutables dont seules les courbes de coût sont recalculées après un achat Prestige.
   const runtimeUpgrades = BASE_CONFIG.upgrades.map((upgrade) => ({ ...upgrade }));
   const runtimeComboUpgrade = { ...BASE_CONFIG.comboUpgrade };
   const runtimeConfig = Object.freeze({
@@ -30,35 +31,38 @@
   window.NightIdleConfig = runtimeConfig;
 
   let currentLevel = 0;
-  let currentReduction = 0;
+  let currentProgress = 0;
 
   function clampLevel(value) {
     return Math.max(0, Math.min(mastery.maxLevel, Math.floor(Number(value) || 0)));
   }
 
-  function reductionForLevel(level) {
-    return Math.min(
-      Number(mastery.maxGrowthReduction) || 0,
-      clampLevel(level) * (Number(mastery.growthReductionPerLevel) || 0)
-    );
+  function progressForLevel(level) {
+    if (mastery.maxLevel <= 0) return 1;
+    return Math.max(0, Math.min(1, clampLevel(level) / mastery.maxLevel));
   }
 
-  function effectiveGrowth(baseGrowth, reduction) {
-    // On réduit uniquement la partie située au-dessus de ×1 afin d'aplatir l'exponentielle
-    // sans transformer la croissance en remise linéaire sur le prix final.
-    return 1 + Math.max(0, baseGrowth - 1) * (1 - reduction);
+  function effectiveGrowth(baseGrowth, levelOrProgress = currentLevel) {
+    const base = Math.max(targetGrowth, Number(baseGrowth) || targetGrowth);
+    const progress = Number(levelOrProgress) <= 1 && !Number.isInteger(levelOrProgress)
+      ? Math.max(0, Math.min(1, Number(levelOrProgress) || 0))
+      : progressForLevel(levelOrProgress);
+
+    // Interpolation directe : au niveau 50, chaque courbe vaut exactement ×1.10,
+    // indépendamment de sa valeur d'origine (1.60, 1.65, 1.80, 1.85 ou 2.05).
+    return base + (targetGrowth - base) * progress;
   }
 
   function applyLevel(level) {
     currentLevel = clampLevel(level);
-    currentReduction = reductionForLevel(currentLevel);
+    currentProgress = progressForLevel(currentLevel);
 
     runtimeUpgrades.forEach((upgrade) => {
-      const baseGrowth = baseGeneralGrowth.get(upgrade.id) || 1;
-      upgrade.costGrowth = effectiveGrowth(baseGrowth, currentReduction);
+      const baseGrowth = baseGeneralGrowth.get(upgrade.id) || targetGrowth;
+      upgrade.costGrowth = effectiveGrowth(baseGrowth, currentProgress);
     });
 
-    runtimeComboUpgrade.costGrowth = effectiveGrowth(baseComboGrowth, currentReduction);
+    runtimeComboUpgrade.costGrowth = effectiveGrowth(baseComboGrowth, currentProgress);
   }
 
   function readSavedLevel() {
@@ -73,7 +77,7 @@
 
   applyLevel(readSavedLevel());
 
-  // Met à jour la courbe avant que game-core ne rerende la boutique après un achat.
+  // Met la courbe à jour avant que game-core ne rerende la boutique après un achat.
   if (storageProto && inheritedSetItem) {
     try {
       storageProto.setItem = function nightIdleEconomySetItem(key, value) {
@@ -99,10 +103,29 @@
     }
   }
 
-  const percentFormatter = new Intl.NumberFormat("fr-CH", { maximumFractionDigits: 1 });
+  const growthFormatter = new Intl.NumberFormat("fr-CH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+
+  function growthRangeAt(level) {
+    const values = [
+      ...baseGeneralGrowth.values(),
+      baseComboGrowth
+    ].map((base) => effectiveGrowth(base, clampLevel(level)));
+
+    return {
+      min: Math.min(...values),
+      max: Math.max(...values)
+    };
+  }
 
   function effectText(level) {
-    return `Courbe : -${percentFormatter.format(reductionForLevel(level) * 100)} %`;
+    const range = growthRangeAt(level);
+    if (Math.abs(range.max - range.min) < 0.0005) {
+      return `Toutes les courbes : ×${growthFormatter.format(range.max)}`;
+    }
+    return `Courbes : ×${growthFormatter.format(range.min)} – ×${growthFormatter.format(range.max)}`;
   }
 
   function patchPrestigeCard() {
@@ -153,9 +176,11 @@
   installShopObserver();
 
   window.NightIdleEconomy = Object.freeze({
-    version: 1,
+    version: 2,
     level: () => currentLevel,
-    reduction: () => currentReduction,
-    effectiveGrowth: (baseGrowth) => effectiveGrowth(Number(baseGrowth) || 1, currentReduction)
+    progress: () => currentProgress,
+    targetGrowth: () => targetGrowth,
+    effectiveGrowth: (baseGrowth) => effectiveGrowth(Number(baseGrowth) || targetGrowth, currentLevel),
+    growthRange: () => growthRangeAt(currentLevel)
   });
 })();
