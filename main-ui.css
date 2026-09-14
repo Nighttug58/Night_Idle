@@ -80,6 +80,7 @@
 .roll-card {
   grid-template-rows: 34px var(--dice-zone-height) 96px;
   gap: clamp(8px, 1.4dvh, 12px);
+  cursor: pointer;
 }
 
 .section-heading {
@@ -149,6 +150,29 @@
 .footer-actions {
   visibility: visible;
   opacity: 1;
+}
+
+.result-panel,
+.stats-grid,
+.stat-card {
+  cursor: pointer;
+}
+
+.roll-card:active,
+.stats-grid:active {
+  filter: brightness(1.035);
+}
+
+.topbar,
+.footer-actions,
+.topbar *,
+.footer-actions * {
+  cursor: default;
+}
+
+.topbar button,
+.footer-actions button {
+  cursor: pointer;
 }
 
 .footer-actions {
