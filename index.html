@@ -5,18 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#11151d">
   <title>Night Idle</title>
-  <link rel="stylesheet" href="styles.css?v=20260914-offlinesafe2">
-  <link rel="stylesheet" href="prestige.css?v=20260914-offlinesafe2">
-  <link rel="stylesheet" href="offline.css?v=20260914-offlinesafe2">
+  <link rel="stylesheet" href="styles.css?v=20260914-mainui1">
+  <link rel="stylesheet" href="prestige.css?v=20260914-mainui1">
+  <link rel="stylesheet" href="offline.css?v=20260914-mainui1">
 </head>
 <body>
   <main class="app-shell">
     <header class="topbar">
-      <div>
-        <p class="eyebrow">NIGHT IDLE</p>
-        <h1>Dice Run</h1>
-      </div>
-
       <div class="currencies-panel" aria-live="polite">
         <div class="currency-block">
           <span>Points</span>
@@ -30,12 +25,8 @@
       </div>
     </header>
 
-    <section class="game-card roll-card" aria-labelledby="rollTitle">
+    <section class="game-card roll-card" aria-label="Dés">
       <div class="section-heading">
-        <div>
-          <p class="eyebrow">LANCER ACTIF</p>
-          <h2 id="rollTitle">Tes dés</h2>
-        </div>
         <div class="heading-actions">
           <button id="upgradesButton" class="icon-button" type="button" aria-haspopup="dialog" aria-label="Ouvrir les améliorations">AMÉLIO.</button>
           <button id="combosButton" class="icon-button" type="button" aria-haspopup="dialog">COMBOS</button>
@@ -43,7 +34,7 @@
         </div>
       </div>
 
-      <div id="diceTray" class="dice-tray" aria-label="Tes dés et prochain dé à débloquer"></div>
+      <div id="diceTray" class="dice-tray" aria-label="Lancer les dés"></div>
 
       <div class="result-panel">
         <div>
@@ -51,11 +42,11 @@
           <strong id="sumValue">—</strong>
         </div>
         <div>
-          <span>Combinaison</span>
+          <span>Combo</span>
           <strong id="comboValue">Aucune</strong>
         </div>
         <div>
-          <span>Multiplicateur</span>
+          <span>Multi.</span>
           <strong id="multiplierValue">×1</strong>
         </div>
         <div class="gain-box">
@@ -64,7 +55,7 @@
         </div>
       </div>
 
-      <button id="rollButton" class="primary-button" type="button">LANCER</button>
+      <button id="rollButton" type="button" hidden aria-hidden="true" tabindex="-1">LANCER</button>
     </section>
 
     <section class="stats-grid" aria-label="Statistiques du run">
@@ -235,9 +226,9 @@
     </div>
   </dialog>
 
-  <script src="js/config.js?v=20260914-offlinesafe2"></script>
-  <script src="js/offline-preflight.js?v=20260914-offlinesafe2"></script>
-  <script src="js/offline.js?v=20260914-offlinesafe2"></script>
-  <script src="js/game.js?v=20260914-offlinesafe2"></script>
+  <script src="js/config.js?v=20260914-mainui1"></script>
+  <script src="js/offline-preflight.js?v=20260914-mainui1"></script>
+  <script src="js/offline.js?v=20260914-mainui1"></script>
+  <script src="js/game.js?v=20260914-mainui1"></script>
 </body>
 </html>
