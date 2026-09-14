@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-gba1";
+  const BUILD = "20260914-economy1";
 
   // Chrome/Android ajoute par défaut un flash bleu sur les zones tactiles.
   // On le supprime sans toucher au focus-visible clavier défini dans styles.css.
@@ -63,6 +63,12 @@
       await loadScript("js/music.js");
     } catch (error) {
       console.warn("[Night Idle] Musique procédurale indisponible, poursuite du boot.", error);
+    }
+
+    try {
+      await loadScript("js/economy.js");
+    } catch (error) {
+      console.warn("[Night Idle] Maîtrise permanente des coûts indisponible, poursuite du boot.", error);
     }
 
     try {
