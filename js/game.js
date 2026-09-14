@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-frenzy5";
+  const BUILD = "20260914-geminf1";
 
   // Supprime totalement le flash/tap highlight natif Android/Chrome sur l'interface.
   // Le focus clavier reste géré séparément avec :focus-visible dans les CSS du jeu.
@@ -104,18 +104,58 @@
     return patched;
   }
 
-  function patchCoreForFrenzy(source) {
-    const needle = "      manualFactor *\n      gemPowerFactor()\n    );";
-    if (!source.includes(needle)) throw new Error("Formule de gain introuvable");
+  function patchCoreForRuntime(source) {
+    let patched = source;
 
-    return source.replace(
-      needle,
+    const gainNeedle = "      manualFactor *\n      gemPowerFactor()\n    );";
+    if (!patched.includes(gainNeedle)) throw new Error("Formule de gain introuvable");
+    patched = patched.replace(
+      gainNeedle,
       `      manualFactor *\n      gemPowerFactor() *\n      (window.NightIdleFrenzy?.multiplier?.() || 1)\n    );`
     );
+
+    const prestigeCostNeedle = `  function prestigeUpgradeCost(upgrade) {
+    const level = prestigeUpgradeLevel(upgrade.id);
+    if (level >= upgrade.maxLevel) return null;
+    return upgrade.costs[level] ?? null;
+  }`;
+    if (!patched.includes(prestigeCostNeedle)) throw new Error("Calcul de coût Prestige introuvable");
+    patched = patched.replace(
+      prestigeCostNeedle,
+      `  function prestigeUpgradeCost(upgrade) {
+    const level = prestigeUpgradeLevel(upgrade.id);
+    if (level >= upgrade.maxLevel) return null;
+
+    const listedCost = upgrade.costs?.[level];
+    if (listedCost !== undefined && listedCost !== null) return listedCost;
+
+    if (upgrade.unlimited) {
+      const costs = Array.isArray(upgrade.costs) ? upgrade.costs : [];
+      const lastListedCost = Math.max(1, Number(costs[costs.length - 1]) || 1);
+      const growth = Math.max(1.001, Number(upgrade.costGrowth) || 1.18);
+      const extraLevel = Math.max(1, level - costs.length + 1);
+      const rawCost = lastListedCost * Math.pow(growth, extraLevel);
+      return Number.isFinite(rawCost)
+        ? Math.max(1, Math.ceil(rawCost))
+        : Number.MAX_SAFE_INTEGER;
+    }
+
+    return null;
+  }`
+    );
+
+    const levelLabelNeedle = '        <span>Niv. ${level}/${upgrade.maxLevel}</span>';
+    if (!patched.includes(levelLabelNeedle)) throw new Error("Libellé niveau Prestige introuvable");
+    patched = patched.replace(
+      levelLabelNeedle,
+      '        <span>${upgrade.unlimited ? `Niv. ${level} · ∞` : `Niv. ${level}/${upgrade.maxLevel}`}</span>'
+    );
+
+    return patched;
   }
 
   async function boot() {
-    if ((Number(window.NightIdleConfig?.version) || 0) < 10) {
+    if ((Number(window.NightIdleConfig?.version) || 0) < 11) {
       try {
         await loadScript("js/config.js");
       } catch (error) {
@@ -174,7 +214,7 @@
     }
 
     try {
-      await loadPatchedScript("js/game-core.js", patchCoreForFrenzy, "Multiplicateur Frénésie");
+      await loadPatchedScript("js/game-core.js", patchCoreForRuntime, "Moteur dynamique");
     } catch (error) {
       console.error("[Night Idle] Échec du chargement du moteur principal.", error);
       const event = new ErrorEvent("error", { error, message: error.message });
