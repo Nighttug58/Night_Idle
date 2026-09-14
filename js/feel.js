@@ -6,7 +6,7 @@
 
   const SAVE_KEY = "nightIdle.save.v1";
   const PREF_KEY = "nightIdle.feel.v1";
-  const BUILD = "20260914-feel1";
+  const BUILD = "20260914-music1";
   const storageProto = window.Storage?.prototype;
   const inheritedSetItem = storageProto?.setItem;
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
@@ -122,15 +122,6 @@
     });
   }
 
-  function vibrate(pattern) {
-    if (!preferences.enabled || typeof navigator.vibrate !== "function") return;
-    try {
-      navigator.vibrate(pattern);
-    } catch {
-      // Non supporté ou refusé par le navigateur.
-    }
-  }
-
   function comboForResult(result) {
     if (!result?.comboName || result.comboName === "Aucune") return null;
     return CONFIG.combos.find((combo) => combo.name === result.comboName) || null;
@@ -222,16 +213,11 @@
     if (isManual || !fastAuto || tier >= 3) floatingGain(result.gain, tier);
     comboBanner(result, tier);
     playRollSound(tier, isManual, fastAuto);
-
-    if (isManual && tier >= 2) {
-      vibrate(tier >= 5 ? [18, 24, 34] : tier >= 4 ? [16, 18, 24] : 14);
-    }
   }
 
   function showPrestigeFeedback(gems) {
     if (document.hidden) return;
     playPrestigeSound();
-    vibrate([24, 35, 55]);
 
     const gemNode = document.getElementById("gemsValue");
     restartClass(gemNode, "feel-prestige-gem");
@@ -303,9 +289,9 @@
 
   function renderFxButton() {
     if (!fxButton) return;
-    fxButton.textContent = preferences.enabled ? "FX ✓" : "FX OFF";
+    fxButton.textContent = preferences.enabled ? "SFX ✓" : "SFX OFF";
     fxButton.classList.toggle("is-enabled", preferences.enabled);
-    fxButton.setAttribute("aria-label", preferences.enabled ? "Désactiver sons et vibrations" : "Activer sons et vibrations");
+    fxButton.setAttribute("aria-label", preferences.enabled ? "Désactiver les effets sonores" : "Activer les effets sonores");
   }
 
   fxButton?.addEventListener("click", () => {
@@ -314,14 +300,13 @@
     if (preferences.enabled) {
       unlockAudio();
       tone(440, 0, 0.06, 0.018, "sine");
-      vibrate(10);
     }
     renderFxButton();
   });
 
   renderFxButton();
   window.NightIdleFeel = Object.freeze({
-    version: 1,
+    version: 2,
     enabled: () => preferences.enabled
   });
 })();
