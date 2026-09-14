@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-mainui5";
+  const BUILD = "20260914-gba1";
 
   // Chrome/Android ajoute par défaut un flash bleu sur les zones tactiles.
   // On le supprime sans toucher au focus-visible clavier défini dans styles.css.
