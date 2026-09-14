@@ -12,20 +12,26 @@
   --accent-strong: #a59cff;
   --success: #7ce3b2;
   --danger: #ff7f92;
+  --page-gap: clamp(7px, 1.4dvh, 12px);
+  --dice-zone-height: clamp(150px, 24dvh, 190px);
 }
 
 * {
   box-sizing: border-box;
 }
 
-html {
-  min-height: 100%;
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
   background: #0b0e13;
 }
 
 body {
-  min-height: 100vh;
-  margin: 0;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at top, rgba(138, 125, 255, 0.14), transparent 34rem),
     #0b0e13;
@@ -42,9 +48,17 @@ button:focus-visible {
 }
 
 .app-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  gap: var(--page-gap);
   width: min(100%, 760px);
+  height: 100dvh;
   margin: 0 auto;
-  padding: max(18px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom));
+  padding:
+    max(10px, env(safe-area-inset-top))
+    16px
+    max(10px, env(safe-area-inset-bottom));
+  overflow: hidden;
 }
 
 .topbar,
@@ -59,10 +73,18 @@ button:focus-visible {
 }
 
 .topbar {
-  padding: 6px 2px 18px;
+  min-height: 54px;
+  padding: 0 2px;
+  flex: 0 0 auto;
+}
+
+.topbar > div:first-child,
+.section-heading > div:first-child {
+  min-width: 0;
 }
 
 .heading-actions {
+  flex: 0 0 auto;
   gap: 8px;
 }
 
@@ -74,25 +96,36 @@ p {
 
 h1 {
   margin-top: 2px;
-  font-size: clamp(1.65rem, 8vw, 2.2rem);
+  overflow: hidden;
+  font-size: clamp(1.45rem, 6vw, 2rem);
   letter-spacing: -0.04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 h2 {
   margin-top: 3px;
-  font-size: 1.1rem;
+  overflow: hidden;
+  font-size: 1.05rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .eyebrow {
+  overflow: hidden;
   color: var(--accent-strong);
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 0.15em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .points-panel {
-  min-width: 118px;
-  padding: 10px 14px;
+  width: 132px;
+  min-width: 132px;
+  padding: 9px 12px;
+  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 16px;
   background: rgba(20, 25, 34, 0.92);
@@ -103,19 +136,24 @@ h2 {
 .muted {
   display: block;
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
 }
 
 .points-panel strong {
   display: block;
+  width: 100%;
   margin-top: 1px;
-  font-size: 1.3rem;
+  overflow: hidden;
+  font-size: 1.2rem;
   font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .game-card {
-  margin-bottom: 14px;
-  padding: 18px;
+  min-height: 0;
+  margin: 0;
+  padding: clamp(12px, 2dvh, 18px);
   border: 1px solid var(--line);
   border-radius: 22px;
   background: rgba(20, 25, 34, 0.94);
@@ -123,6 +161,16 @@ h2 {
 }
 
 .roll-card {
+  display: grid;
+  grid-template-rows: 42px var(--dice-zone-height) 96px 54px;
+  gap: clamp(7px, 1.3dvh, 12px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.section-heading {
+  height: 42px;
+  min-height: 42px;
   overflow: hidden;
 }
 
@@ -135,6 +183,7 @@ h2 {
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 800;
+  white-space: nowrap;
 }
 
 .icon-button {
@@ -146,26 +195,35 @@ h2 {
 .dice-tray {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  min-height: 182px;
-  margin: 20px 0 14px;
+  grid-auto-rows: 1fr;
+  gap: 8px;
+  width: 100%;
+  height: var(--dice-zone-height);
+  min-height: var(--dice-zone-height);
+  max-height: var(--dice-zone-height);
+  margin: 0;
+  padding: 0;
   align-items: center;
+  justify-items: center;
+  overflow: hidden;
+  contain: layout size;
 }
 
 .die {
   display: grid;
   place-items: center;
+  width: min(100%, 94px);
+  height: min(100%, 94px);
   aspect-ratio: 1;
-  max-width: 104px;
-  width: 100%;
   margin: auto;
   padding: 0;
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 22px;
+  border-radius: 20px;
   background: linear-gradient(145deg, #252e3d, #171d27);
   box-shadow: inset 0 1px rgba(255, 255, 255, 0.08), 0 10px 28px rgba(0, 0, 0, 0.22);
   color: #f5f7fb;
-  font-size: clamp(3.2rem, 16vw, 5.5rem);
+  font-size: clamp(2.7rem, 12vw, 5rem);
   line-height: 1;
   user-select: none;
 }
@@ -177,7 +235,7 @@ h2 {
 .locked-die {
   grid-template-rows: 1fr auto;
   gap: 2px;
-  padding: 13px 8px 9px;
+  padding: 10px 7px 8px;
   border-style: dashed;
   background: rgba(27, 34, 48, 0.72);
   color: var(--muted);
@@ -187,15 +245,18 @@ h2 {
 
 .locked-die .lock-icon {
   align-self: end;
-  font-size: clamp(1.8rem, 9vw, 3rem);
+  font-size: clamp(1.55rem, 7vw, 2.7rem);
   filter: grayscale(0.25);
 }
 
 .locked-die small {
+  width: 100%;
   align-self: end;
-  font-size: 0.62rem;
+  overflow: hidden;
+  font-size: 0.59rem;
   font-weight: 850;
-  line-height: 1.15;
+  line-height: 1.1;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -219,29 +280,39 @@ h2 {
 
 .result-panel {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: 44px 44px;
   gap: 8px;
-  margin-bottom: 14px;
+  height: 96px;
+  min-height: 96px;
+  margin: 0;
+  overflow: hidden;
 }
 
 .result-panel > div {
   min-width: 0;
-  padding: 10px;
+  min-height: 0;
+  padding: 7px 9px;
+  overflow: hidden;
   border-radius: 14px;
   background: var(--surface-2);
 }
 
 .result-panel span {
   display: block;
+  overflow: hidden;
   color: var(--muted);
-  font-size: 0.65rem;
+  font-size: 0.61rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .result-panel strong {
   display: block;
+  width: 100%;
+  margin-top: 2px;
   overflow: hidden;
-  margin-top: 4px;
-  font-size: 0.92rem;
+  font-size: 0.86rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -256,19 +327,23 @@ h2 {
 }
 
 .gain-box strong {
+  width: auto;
+  max-width: 70%;
   color: var(--success);
-  font-size: 1.35rem;
+  font-size: 1.2rem;
+  text-align: right;
 }
 
 .primary-button {
   width: 100%;
-  min-height: 58px;
+  height: 54px;
+  min-height: 54px;
   border: 0;
   border-radius: 16px;
   background: linear-gradient(135deg, var(--accent), #6658ff);
   color: white;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 900;
   letter-spacing: 0.06em;
   transition: transform 100ms ease, opacity 100ms ease, filter 100ms ease;
@@ -282,53 +357,74 @@ h2 {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  height: 62px;
+  min-height: 62px;
+  margin: 0;
+  overflow: hidden;
 }
 
 .stat-card {
   min-width: 0;
-  padding: 14px;
+  height: 62px;
+  padding: 9px 11px;
+  overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 15px;
   background: rgba(20, 25, 34, 0.82);
 }
 
 .stat-card span {
   display: block;
+  overflow: hidden;
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.63rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .stat-card strong {
   display: block;
+  width: 100%;
+  margin-top: 4px;
   overflow: hidden;
-  margin-top: 6px;
-  font-size: 1rem;
+  font-size: 0.92rem;
   font-variant-numeric: tabular-nums;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .footer-actions {
-  padding: 4px 4px 0;
+  min-height: 24px;
+  padding: 0 4px;
+  overflow: hidden;
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.footer-actions > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .text-button {
-  padding: 7px 0;
+  flex: 0 0 auto;
+  padding: 4px 0;
   border: 0;
   background: transparent;
   color: var(--danger);
   cursor: pointer;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
+  white-space: nowrap;
 }
 
 .modal {
   width: min(92vw, 560px);
   max-height: 82dvh;
   padding: 0;
+  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 22px;
   background: var(--surface);
@@ -345,6 +441,7 @@ h2 {
   display: flex;
   max-height: 82dvh;
   padding: 18px;
+  overflow: hidden;
   flex-direction: column;
 }
 
@@ -371,6 +468,7 @@ h2 {
 .combos-list {
   display: grid;
   gap: 8px;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -390,7 +488,10 @@ h2 {
 }
 
 .combo-row .combo-name {
+  overflow: hidden;
   font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .combo-row .combo-example {
@@ -407,12 +508,15 @@ h2 {
 }
 
 @media (max-width: 520px) {
+  :root {
+    --dice-zone-height: clamp(146px, 23dvh, 176px);
+  }
+
   .app-shell {
     padding-inline: 12px;
   }
 
   .game-card {
-    padding: 15px;
     border-radius: 19px;
   }
 
@@ -427,29 +531,18 @@ h2 {
   .dice-count,
   .icon-button {
     padding: 6px 8px;
-    font-size: 0.65rem;
-  }
-
-  .dice-tray {
-    min-height: 154px;
+    font-size: 0.64rem;
   }
 
   .die {
-    border-radius: 18px;
-  }
-
-  .stats-grid {
-    gap: 7px;
-  }
-
-  .stat-card {
-    padding: 11px;
+    width: min(100%, 82px);
+    height: min(100%, 82px);
+    border-radius: 17px;
+    font-size: clamp(2.5rem, 12vw, 4rem);
   }
 
   .footer-actions {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 3px;
+    gap: 8px;
   }
 
   .modal-card {
@@ -463,13 +556,128 @@ h2 {
 }
 
 @media (min-width: 620px) {
+  :root {
+    --dice-zone-height: clamp(104px, 17dvh, 132px);
+  }
+
   .dice-tray {
-    grid-template-columns: repeat(6, 1fr);
-    min-height: 116px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-rows: 1fr;
   }
 
   .die {
+    width: min(100%, 96px);
+    height: min(100%, 96px);
     border-radius: 18px;
     font-size: 4rem;
+  }
+}
+
+@media (max-height: 700px) {
+  :root {
+    --page-gap: 6px;
+    --dice-zone-height: 132px;
+  }
+
+  .app-shell {
+    padding-top: max(6px, env(safe-area-inset-top));
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+  }
+
+  .topbar {
+    min-height: 46px;
+  }
+
+  h1 {
+    font-size: 1.35rem;
+  }
+
+  .game-card {
+    padding: 10px 12px;
+  }
+
+  .roll-card {
+    grid-template-rows: 38px var(--dice-zone-height) 86px 48px;
+    gap: 6px;
+  }
+
+  .section-heading {
+    height: 38px;
+    min-height: 38px;
+  }
+
+  .result-panel {
+    grid-template-rows: 40px 40px;
+    height: 86px;
+    min-height: 86px;
+    gap: 6px;
+  }
+
+  .primary-button {
+    height: 48px;
+    min-height: 48px;
+  }
+
+  .stats-grid,
+  .stat-card {
+    height: 54px;
+    min-height: 54px;
+  }
+
+  .stat-card {
+    padding: 7px 9px;
+  }
+
+  .footer-actions {
+    min-height: 20px;
+    font-size: 0.62rem;
+  }
+
+  .text-button {
+    font-size: 0.62rem;
+  }
+}
+
+@media (max-height: 600px) {
+  :root {
+    --dice-zone-height: 112px;
+  }
+
+  .topbar {
+    min-height: 40px;
+  }
+
+  .points-panel {
+    padding-block: 6px;
+  }
+
+  .roll-card {
+    grid-template-rows: 34px var(--dice-zone-height) 78px 44px;
+  }
+
+  .section-heading {
+    height: 34px;
+    min-height: 34px;
+  }
+
+  .result-panel {
+    grid-template-rows: 36px 36px;
+    height: 78px;
+    min-height: 78px;
+  }
+
+  .primary-button {
+    height: 44px;
+    min-height: 44px;
+  }
+
+  .stats-grid,
+  .stat-card {
+    height: 48px;
+    min-height: 48px;
+  }
+
+  .footer-actions > span {
+    display: none;
   }
 }
