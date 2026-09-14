@@ -1,12 +1,13 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-frenzy4";
+  const BUILD = "20260914-frenzy5";
   const SAVE_KEY = "nightIdle.save.v1";
-  const PRESTIGE_SKILL_ID = "frenzy_mastery";
+  const FRENZY_SKILL_ID = "frenzy_mastery";
+  const TIER_SKILL_ID = "frenzy_tier_power";
   const ACTIVE_CPS = 3;
   const BASE_MAX_MULTIPLIER = 10;
-  const BAR_MULTIPLIER_STEP = 0.5;
+  const BASE_BAR_MULTIPLIER_STEP = 0.5;
   const BAR_FILL_SLOWDOWN = 10 / 3;
   const CPS_WINDOW_MS = 1000;
   const SOFT_DECAY_DELAY_MS = 460;
@@ -16,7 +17,8 @@
   const MAX_TEMPO_MULTIPLIER = 1.32;
 
   const config = window.NightIdleConfig;
-  const prestigeSkill = config?.prestigeShop?.find((upgrade) => upgrade.id === PRESTIGE_SKILL_ID) || null;
+  const frenzySkill = config?.prestigeShop?.find((upgrade) => upgrade.id === FRENZY_SKILL_ID) || null;
+  const tierSkill = config?.prestigeShop?.find((upgrade) => upgrade.id === TIER_SKILL_ID) || null;
   const storageProto = window.Storage?.prototype;
   const inheritedSetItem = storageProto?.setItem;
 
@@ -37,43 +39,56 @@
   let lastManualClickAt = 0;
   let lastFrameAt = performance.now();
   let lastUiAt = 0;
-  let prestigeLevel = 0;
+  let frenzyPrestigeLevel = 0;
+  let tierPowerLevel = 0;
 
-  function clampPrestigeLevel(value) {
-    const maxLevel = Math.max(0, Number(prestigeSkill?.maxLevel) || 0);
+  function clampSkillLevel(skill, value) {
+    const maxLevel = Math.max(0, Number(skill?.maxLevel) || 0);
     return Math.max(0, Math.min(maxLevel, Math.floor(Number(value) || 0)));
   }
 
-  function readPrestigeLevel() {
+  function readPrestigeLevels() {
     try {
       const raw = localStorage.getItem(SAVE_KEY);
       const save = raw ? JSON.parse(raw) : null;
-      return clampPrestigeLevel(save?.prestigeUpgrades?.[PRESTIGE_SKILL_ID]);
+      return {
+        frenzy: clampSkillLevel(frenzySkill, save?.prestigeUpgrades?.[FRENZY_SKILL_ID]),
+        tier: clampSkillLevel(tierSkill, save?.prestigeUpgrades?.[TIER_SKILL_ID])
+      };
     } catch {
-      return 0;
+      return { frenzy: 0, tier: 0 };
     }
   }
 
   function maxMultiplier() {
-    const base = Number(prestigeSkill?.baseMaxMultiplier) || BASE_MAX_MULTIPLIER;
-    const perLevel = Number(prestigeSkill?.maxMultiplierPerLevel) || 0;
-    return base + prestigeLevel * perLevel;
+    const base = Number(frenzySkill?.baseMaxMultiplier) || BASE_MAX_MULTIPLIER;
+    const perLevel = Number(frenzySkill?.maxMultiplierPerLevel) || 0;
+    return base + frenzyPrestigeLevel * perLevel;
+  }
+
+  function barMultiplierStep() {
+    const base = Number(tierSkill?.baseStep) || BASE_BAR_MULTIPLIER_STEP;
+    const perLevel = Number(tierSkill?.stepPerLevel) || 0;
+    const maxBonus = Math.max(0, Number(tierSkill?.maxBonusStep) || 0);
+    const bonus = Math.min(maxBonus, tierPowerLevel * perLevel);
+    return Math.round((base + bonus) * 10) / 10;
   }
 
   function maxBars() {
-    return Math.max(0, Math.round((maxMultiplier() - 1) / BAR_MULTIPLIER_STEP));
+    const step = Math.max(0.1, barMultiplierStep());
+    return Math.max(0, Math.ceil((maxMultiplier() - 1) / step - 1e-9));
   }
 
   function chargeSpeedMultiplier() {
-    const perLevel = Number(prestigeSkill?.chargeSpeedPerLevel) || 0;
-    return 1 + prestigeLevel * perLevel;
+    const perLevel = Number(frenzySkill?.chargeSpeedPerLevel) || 0;
+    return 1 + frenzyPrestigeLevel * perLevel;
   }
 
   function clampBarProgress(value) {
     return Math.max(0, Math.min(maxBars(), Number(value) || 0));
   }
 
-  prestigeLevel = readPrestigeLevel();
+  ({ frenzy: frenzyPrestigeLevel, tier: tierPowerLevel } = readPrestigeLevels());
 
   const meter = document.createElement("div");
   meter.id = "frenzyMeter";
@@ -90,9 +105,7 @@
     </div>
   `;
 
-  if (rollCard) {
-    rollCard.insertBefore(meter, hiddenRollButton || null);
-  }
+  if (rollCard) rollCard.insertBefore(meter, hiddenRollButton || null);
 
   const fill = document.getElementById("frenzyFill");
   const multiplierNode = document.getElementById("frenzyMultiplierValue");
@@ -114,7 +127,7 @@
   function currentMultiplier() {
     return Math.min(
       maxMultiplier(),
-      1 + completedBars() * BAR_MULTIPLIER_STEP
+      1 + completedBars() * barMultiplierStep()
     );
   }
 
@@ -136,8 +149,6 @@
 
   function barGainForCps(value) {
     if (value < ACTIVE_CPS || barProgress >= maxBars()) return 0;
-
-    // Même logique qu'avant, mais la vitesse de base est désormais ×3 par rapport à frenzy3.
     const oldGain = Math.min(0.064, 0.018 + (value - ACTIVE_CPS) * 0.009);
     return (oldGain / BAR_FILL_SLOWDOWN) * chargeSpeedMultiplier();
   }
@@ -179,6 +190,10 @@
     window.NightIdleMusic?.setTempoMultiplier?.(tempoMultiplier);
   }
 
+  function formatStep(value) {
+    return Number(value).toLocaleString("fr-CH", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  }
+
   function render(force = false) {
     const now = performance.now();
     if (!force && now - lastUiAt < 65) return;
@@ -188,6 +203,7 @@
     const cap = maxMultiplier();
     const bars = maxBars();
     const done = completedBars();
+    const step = barMultiplierStep();
     const maxed = done >= bars && bars > 0;
     const active = cps >= ACTIVE_CPS || barProgress > 0.001;
     const hot = multiplier >= 1 + (cap - 1) * 0.45;
@@ -196,7 +212,7 @@
     meter.classList.toggle("is-active", active);
     meter.classList.toggle("is-hot", hot);
     meter.classList.toggle("is-maxed", maxed);
-    meter.title = `Frénésie : +0,5× par barre · ${bars} barres jusqu'à ×${cap} · remplissage Prestige ×${chargeSpeedMultiplier().toFixed(2)}`;
+    meter.title = `Frénésie : +${formatStep(step)}× par barre · ${bars} barres jusqu'à ×${cap} · remplissage ×${chargeSpeedMultiplier().toFixed(2)}`;
 
     if (fill) fill.style.transform = `scaleX(${currentBarCharge()})`;
     if (multiplierNode) {
@@ -205,7 +221,7 @@
     if (cpsNode) {
       cpsNode.textContent = maxed
         ? `MAX · ${cps} CPS`
-        : `Barre ${shownBar}/${bars} · ${cps} CPS`;
+        : `Barre ${shownBar}/${bars} · +${formatStep(step)}× · ${cps} CPS`;
     }
   }
 
@@ -227,10 +243,12 @@
     requestAnimationFrame(tick);
   }
 
-  function applyPrestigeLevel(level) {
-    const next = clampPrestigeLevel(level);
-    if (next === prestigeLevel) return;
-    prestigeLevel = next;
+  function applyPrestigeLevels(frenzyLevel, tierLevel) {
+    const nextFrenzy = clampSkillLevel(frenzySkill, frenzyLevel);
+    const nextTier = clampSkillLevel(tierSkill, tierLevel);
+    if (nextFrenzy === frenzyPrestigeLevel && nextTier === tierPowerLevel) return;
+    frenzyPrestigeLevel = nextFrenzy;
+    tierPowerLevel = nextTier;
     barProgress = clampBarProgress(barProgress);
     render(true);
   }
@@ -238,20 +256,24 @@
   if (storageProto && inheritedSetItem) {
     try {
       storageProto.setItem = function nightIdleFrenzySetItem(key, value) {
-        let nextLevel = null;
+        let nextLevels = null;
 
         if (this === localStorage && key === SAVE_KEY) {
           try {
             const parsed = JSON.parse(value);
             if (parsed && typeof parsed === "object") {
-              nextLevel = clampPrestigeLevel(parsed?.prestigeUpgrades?.[PRESTIGE_SKILL_ID]);
+              nextLevels = {
+                frenzy: clampSkillLevel(frenzySkill, parsed?.prestigeUpgrades?.[FRENZY_SKILL_ID]),
+                tier: clampSkillLevel(tierSkill, parsed?.prestigeUpgrades?.[TIER_SKILL_ID])
+              };
             }
           } catch {
+            // La chaîne de sauvegarde existante garde son comportement normal.
           }
         }
 
         const result = inheritedSetItem.call(this, key, value);
-        if (nextLevel !== null) applyPrestigeLevel(nextLevel);
+        if (nextLevels) applyPrestigeLevels(nextLevels.frenzy, nextLevels.tier);
         return result;
       };
     } catch (error) {
@@ -259,41 +281,53 @@
     }
   }
 
-  function prestigeEffectText(level) {
-    const clamped = clampPrestigeLevel(level);
-    const base = Number(prestigeSkill?.baseMaxMultiplier) || BASE_MAX_MULTIPLIER;
-    const perMax = Number(prestigeSkill?.maxMultiplierPerLevel) || 0;
-    const perSpeed = Number(prestigeSkill?.chargeSpeedPerLevel) || 0;
+  function frenzyEffectText(level) {
+    const clamped = clampSkillLevel(frenzySkill, level);
+    const base = Number(frenzySkill?.baseMaxMultiplier) || BASE_MAX_MULTIPLIER;
+    const perMax = Number(frenzySkill?.maxMultiplierPerLevel) || 0;
+    const perSpeed = Number(frenzySkill?.chargeSpeedPerLevel) || 0;
     const cap = base + clamped * perMax;
     const speedPercent = clamped * perSpeed * 100;
-    const bars = Math.round((cap - 1) / BAR_MULTIPLIER_STEP);
-    return `+0,5× / barre · ${bars} barres · Remplissage +${Math.round(speedPercent)} % · Max ×${cap}`;
+    return `Remplissage +${Math.round(speedPercent)} % · Max ×${cap}`;
   }
 
-  function patchPrestigeCard() {
-    if (!prestigeSkill) return;
+  function tierEffectText(level) {
+    const clamped = clampSkillLevel(tierSkill, level);
+    const base = Number(tierSkill?.baseStep) || BASE_BAR_MULTIPLIER_STEP;
+    const perLevel = Number(tierSkill?.stepPerLevel) || 0;
+    const maxBonus = Math.max(0, Number(tierSkill?.maxBonusStep) || 0);
+    const step = base + Math.min(maxBonus, clamped * perLevel);
+    return `Gain par barre : +${formatStep(step)}×`;
+  }
+
+  function patchCard(card, skill, effectText) {
+    if (!skill) return false;
+    const title = card.querySelector(".upgrade-title-row strong")?.textContent?.trim();
+    if (title !== skill.name) return false;
+
+    const levelText = card.querySelector(".upgrade-title-row span")?.textContent || "";
+    const level = clampSkillLevel(skill, levelText.match(/Niv\.\s*(\d+)/)?.[1]);
+    const maxed = level >= skill.maxLevel;
+    const effect = card.querySelector(".upgrade-effect");
+    if (!effect) return true;
+
+    const nextLevel = Math.min(skill.maxLevel, level + 1);
+    const html = `${effectText(level)}${maxed ? "" : ` → <strong>${effectText(nextLevel)}</strong>`}`;
+    if (effect.innerHTML !== html) effect.innerHTML = html;
+    return true;
+  }
+
+  function patchPrestigeCards() {
     const list = document.getElementById("prestigeShopList");
     if (!list) return;
 
     for (const card of list.querySelectorAll(".prestige-shop-card")) {
-      const title = card.querySelector(".upgrade-title-row strong")?.textContent?.trim();
-      if (title !== prestigeSkill.name) continue;
-
-      const levelText = card.querySelector(".upgrade-title-row span")?.textContent || "";
-      const level = clampPrestigeLevel(levelText.match(/Niv\.\s*(\d+)/)?.[1]);
-      const maxed = level >= prestigeSkill.maxLevel;
-      const effect = card.querySelector(".upgrade-effect");
-      if (!effect) return;
-
-      const nextLevel = Math.min(prestigeSkill.maxLevel, level + 1);
-      const html = `${prestigeEffectText(level)}${maxed ? "" : ` → <strong>${prestigeEffectText(nextLevel)}</strong>`}`;
-      if (effect.innerHTML !== html) effect.innerHTML = html;
-      return;
+      patchCard(card, frenzySkill, frenzyEffectText);
+      patchCard(card, tierSkill, tierEffectText);
     }
   }
 
   function installShopObserver() {
-    if (!prestigeSkill) return;
     const list = document.getElementById("prestigeShopList");
     if (!list || typeof MutationObserver === "undefined") return;
 
@@ -304,7 +338,7 @@
       queueMicrotask(() => {
         scheduled = false;
         observer.disconnect();
-        patchPrestigeCard();
+        patchPrestigeCards();
         observer.observe(list, { childList: true, subtree: true });
       });
     });
@@ -312,7 +346,7 @@
     observer.observe(list, { childList: true, subtree: true });
     queueMicrotask(() => {
       observer.disconnect();
-      patchPrestigeCard();
+      patchPrestigeCards();
       observer.observe(list, { childList: true, subtree: true });
     });
   }
@@ -341,13 +375,15 @@
   requestAnimationFrame(tick);
 
   window.NightIdleFrenzy = Object.freeze({
-    version: 4,
+    version: 5,
     multiplier: () => currentMultiplier(),
     maxMultiplier: () => maxMultiplier(),
+    barMultiplierStep: () => barMultiplierStep(),
     maxBars: () => maxBars(),
     completedBars: () => completedBars(),
     currentBarCharge: () => currentBarCharge(),
-    prestigeLevel: () => prestigeLevel,
+    prestigeLevel: () => frenzyPrestigeLevel,
+    tierPowerLevel: () => tierPowerLevel,
     chargeSpeedMultiplier: () => chargeSpeedMultiplier(),
     cps: () => cps,
     charge: () => currentBarCharge(),
