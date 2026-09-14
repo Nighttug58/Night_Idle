@@ -1,5 +1,5 @@
 window.NightIdleConfig = Object.freeze({
-  version: 5,
+  version: 6,
   maxDice: 6,
   dieFaces: 6,
 
@@ -14,7 +14,8 @@ window.NightIdleConfig = Object.freeze({
   prestige: Object.freeze({
     pointScale: 1000000,
     gemCoefficient: 5,
-    minimumGems: 1
+    minimumGems: 1,
+    minimumOfflineMs: 15000
   }),
 
   prestigeShop: Object.freeze([
@@ -25,6 +26,22 @@ window.NightIdleConfig = Object.freeze({
       maxLevel: 10,
       costs: Object.freeze([1, 2, 3, 5, 8, 12, 18, 25, 35, 50]),
       intervalsMs: Object.freeze([0, 5000, 4000, 3000, 2500, 2000, 1500, 1000, 500, 333, 200])
+    }),
+    Object.freeze({
+      id: "offline_income",
+      name: "Revenu hors ligne",
+      description: "Produit une partie du rendement de l'Auto Clicker pendant ton absence. Nécessite l'Auto Clicker.",
+      maxLevel: 10,
+      costs: Object.freeze([2, 3, 4, 6, 8, 11, 15, 20, 27, 35]),
+      efficiencyPerLevel: 0.10
+    }),
+    Object.freeze({
+      id: "time_reserve",
+      name: "Réserve temporelle",
+      description: "Augmente la durée maximale d'absence pouvant générer du revenu hors ligne. La réserve de base est de 10 minutes.",
+      maxLevel: 8,
+      costs: Object.freeze([1, 2, 4, 7, 12, 20, 32, 50]),
+      valuesMinutes: Object.freeze([10, 30, 60, 120, 240, 480, 720, 1440, 2880])
     }),
     Object.freeze({
       id: "fate_reroll",
