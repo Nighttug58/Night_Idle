@@ -1,5 +1,5 @@
 window.NightIdleConfig = Object.freeze({
-  version: 4,
+  version: 5,
   maxDice: 6,
   dieFaces: 6,
 
@@ -16,6 +16,75 @@ window.NightIdleConfig = Object.freeze({
     gemCoefficient: 5,
     minimumGems: 1
   }),
+
+  prestigeShop: Object.freeze([
+    Object.freeze({
+      id: "auto_clicker",
+      name: "Auto Clicker",
+      description: "Lance automatiquement les dés. Les lancers automatiques ne bénéficient pas de Puissance manuelle.",
+      maxLevel: 10,
+      costs: Object.freeze([1, 2, 3, 5, 8, 12, 18, 25, 35, 50]),
+      intervalsMs: Object.freeze([0, 5000, 4000, 3000, 2500, 2000, 1500, 1000, 500, 333, 200])
+    }),
+    Object.freeze({
+      id: "fate_reroll",
+      name: "Chance du Destin",
+      description: "Donne une chance de relancer automatiquement le dé offrant le meilleur potentiel. Le nouveau résultat n'est gardé que s'il améliore le lancer.",
+      maxLevel: 10,
+      costs: Object.freeze([1, 2, 3, 4, 6, 8, 11, 15, 20, 27]),
+      chancePerLevel: 0.02
+    }),
+    Object.freeze({
+      id: "starting_points",
+      name: "Départ accéléré",
+      description: "Commence chaque nouveau run avec des Points supplémentaires.",
+      maxLevel: 5,
+      costs: Object.freeze([1, 2, 4, 7, 12]),
+      values: Object.freeze([0, 100, 500, 2000, 10000, 50000])
+    }),
+    Object.freeze({
+      id: "dice_discount",
+      name: "Héritage des dés",
+      description: "Réduit définitivement le prix d'achat des dés pendant tous les runs.",
+      maxLevel: 10,
+      costs: Object.freeze([2, 3, 4, 6, 8, 11, 15, 20, 27, 35]),
+      discountPerLevel: 0.05,
+      maxDiscount: 0.50
+    }),
+    Object.freeze({
+      id: "combo_discount",
+      name: "Héritage des combos",
+      description: "Réduit définitivement le prix de déblocage des combinaisons.",
+      maxLevel: 10,
+      costs: Object.freeze([2, 3, 4, 6, 8, 11, 15, 20, 27, 35]),
+      discountPerLevel: 0.05,
+      maxDiscount: 0.50
+    }),
+    Object.freeze({
+      id: "gem_power",
+      name: "Puissance des Gemmes",
+      description: "Chaque Gemme actuellement possédée augmente tous les gains. Chaque niveau ajoute +0,02 % par Gemme.",
+      maxLevel: 10,
+      costs: Object.freeze([3, 4, 5, 7, 10, 14, 19, 25, 32, 40]),
+      bonusPerGemPerLevel: 0.0002
+    }),
+    Object.freeze({
+      id: "free_combos",
+      name: "Combos hérités",
+      description: "Commence chaque nouveau run avec des combinaisons déjà débloquées, dans l'ordre de progression.",
+      maxLevel: 5,
+      costs: Object.freeze([5, 10, 20, 35, 60]),
+      combosPerLevel: 1
+    }),
+    Object.freeze({
+      id: "starting_dice",
+      name: "Dés hérités",
+      description: "Commence les futurs runs avec davantage de dés déjà débloqués.",
+      maxLevel: 2,
+      costs: Object.freeze([25, 75]),
+      startingDiceByLevel: Object.freeze([1, 2, 3])
+    })
+  ]),
 
   upgrades: Object.freeze([
     {
