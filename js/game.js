@@ -8,6 +8,7 @@
   const $ = (id) => document.getElementById(id);
   const ui = {
     points: $("pointsValue"),
+    gems: $("gemsValue"),
     diceCount: $("diceCountValue"),
     diceTray: $("diceTray"),
     sum: $("sumValue"),
@@ -31,8 +32,19 @@
     comboUpgrades: $("comboUpgradesList"),
     upgradesScroll: document.querySelector(".upgrade-tabs-body"),
     rolls: $("totalRollsValue"),
-    earned: $("totalEarnedValue"),
+    runPoints: $("runPointsValue"),
     best: $("bestGainValue"),
+    prestigeStatus: $("prestigeStatusText"),
+    prestigeButton: $("prestigeButton"),
+    prestigeModal: $("prestigeModal"),
+    closePrestige: $("closePrestigeButton"),
+    prestigeCurrentGems: $("prestigeCurrentGems"),
+    prestigeCount: $("prestigeCountValue"),
+    prestigeDiceStatus: $("prestigeDiceStatus"),
+    prestigeCombosStatus: $("prestigeCombosStatus"),
+    prestigeRunPoints: $("prestigeRunPointsValue"),
+    prestigeReward: $("prestigeRewardValue"),
+    confirmPrestige: $("confirmPrestigeButton"),
     reset: $("resetButton")
   };
 
@@ -48,17 +60,25 @@
     return Object.fromEntries(CONFIG.combos.map((combo) => [combo.id, false]));
   }
 
+  function freshRunState() {
+    return {
+      points: 0,
+      diceCount: 1,
+      totalRolls: 0,
+      runPointsEarned: 0,
+      bestGain: 0,
+      lastRoll: [],
+      lastResult: null,
+      upgrades: defaultUpgradeLevels(),
+      comboUpgrades: defaultComboUpgradeLevels(),
+      comboUnlocks: defaultComboUnlocks()
+    };
+  }
+
   const freshState = () => ({
-    points: 0,
-    diceCount: 1,
-    totalRolls: 0,
-    totalEarned: 0,
-    bestGain: 0,
-    lastRoll: [],
-    lastResult: null,
-    upgrades: defaultUpgradeLevels(),
-    comboUpgrades: defaultComboUpgradeLevels(),
-    comboUnlocks: defaultComboUnlocks()
+    ...freshRunState(),
+    gems: 0,
+    prestigeCount: 0
   });
 
   function load() {
@@ -77,9 +97,15 @@
       });
 
       return {
-        ...base,
-        ...saved,
+        points: Math.max(0, Number(saved.points) || 0),
+        gems: Math.max(0, Math.floor(Number(saved.gems) || 0)),
+        prestigeCount: Math.max(0, Math.floor(Number(saved.prestigeCount) || 0)),
         diceCount: Math.max(1, Math.min(CONFIG.maxDice, Number(saved.diceCount) || 1)),
+        totalRolls: Math.max(0, Math.floor(Number(saved.totalRolls) || 0)),
+        runPointsEarned: Math.max(0, Number(saved.runPointsEarned ?? saved.totalEarned) || 0),
+        bestGain: Math.max(0, Number(saved.bestGain) || 0),
+        lastRoll: Array.isArray(saved.lastRoll) ? saved.lastRoll : [],
+        lastResult: saved.lastResult || null,
         upgrades: { ...base.upgrades, ...(saved.upgrades || {}) },
         comboUpgrades,
         comboUnlocks
@@ -122,6 +148,21 @@
 
   function comboUnlocked(id) {
     return state.comboUnlocks[id] === true;
+  }
+
+  function unlockedComboCount() {
+    return CONFIG.combos.filter((combo) => comboUnlocked(combo.id)).length;
+  }
+
+  function prestigeEligible() {
+    return state.diceCount >= CONFIG.maxDice && unlockedComboCount() === CONFIG.combos.length;
+  }
+
+  function prestigeReward() {
+    if (!prestigeEligible()) return 0;
+    const scaledPoints = Math.max(0, state.runPointsEarned) / CONFIG.prestige.pointScale;
+    const rawReward = CONFIG.prestige.gemCoefficient * Math.sqrt(scaledPoints);
+    return Math.max(CONFIG.prestige.minimumGems, Math.floor(rawReward));
   }
 
   function upgradeCost(upgrade) {
@@ -237,7 +278,7 @@
     };
     state.points += gain;
     state.totalRolls += 1;
-    state.totalEarned += gain;
+    state.runPointsEarned += gain;
     state.bestGain = Math.max(state.bestGain, gain);
     save();
     render(true);
@@ -288,6 +329,26 @@
     state.comboUpgrades[id] = comboUpgradeLevel(id) + 1;
     save();
     render(false);
+  }
+
+  function performPrestige() {
+    if (!prestigeEligible()) return;
+
+    const reward = prestigeReward();
+    const preservedGems = state.gems + reward;
+    const preservedPrestigeCount = state.prestigeCount + 1;
+
+    state = {
+      ...freshRunState(),
+      gems: preservedGems,
+      prestigeCount: preservedPrestigeCount
+    };
+
+    activeUpgradeTab = "general";
+    setUpgradeTab(activeUpgradeTab);
+    save();
+    render(false);
+    if (ui.prestigeModal.open) ui.prestigeModal.close();
   }
 
   function createOwnedDie(index, animate) {
@@ -471,6 +532,33 @@
     ui.upgradesScroll.scrollTop = 0;
   }
 
+  function renderPrestige() {
+    const eligible = prestigeEligible();
+    const reward = prestigeReward();
+    const comboCount = unlockedComboCount();
+
+    ui.gems.textContent = fmt(state.gems);
+    ui.prestigeCurrentGems.textContent = fmt(state.gems);
+    ui.prestigeCount.textContent = fmt(state.prestigeCount);
+    ui.prestigeDiceStatus.textContent = `${state.diceCount}/${CONFIG.maxDice}`;
+    ui.prestigeCombosStatus.textContent = `${comboCount}/${CONFIG.combos.length}`;
+    ui.prestigeRunPoints.textContent = fmt(state.runPointsEarned);
+    ui.prestigeReward.textContent = `+${fmt(reward)} ${reward === 1 ? "Gemme" : "Gemmes"}`;
+
+    ui.prestigeDiceStatus.classList.toggle("is-complete", state.diceCount >= CONFIG.maxDice);
+    ui.prestigeCombosStatus.classList.toggle("is-complete", comboCount === CONFIG.combos.length);
+    ui.prestigeButton.classList.toggle("is-ready", eligible);
+    ui.prestigeButton.textContent = eligible ? `PRESTIGE +${fmt(reward)}` : "PRESTIGE 🔒";
+    ui.prestigeStatus.textContent = eligible
+      ? `Prestige disponible : +${fmt(reward)} ${reward === 1 ? "Gemme" : "Gemmes"}`
+      : `Prestige : ${state.diceCount}/${CONFIG.maxDice} dés · ${comboCount}/${CONFIG.combos.length} combos`;
+
+    ui.confirmPrestige.disabled = !eligible;
+    ui.confirmPrestige.textContent = eligible
+      ? `PRESTIGE +${fmt(reward)} ${reward === 1 ? "GEMME" : "GEMMES"}`
+      : "PRESTIGE VERROUILLÉ";
+  }
+
   function render(animate) {
     ui.points.textContent = fmt(state.points);
     ui.diceCount.textContent = state.diceCount;
@@ -483,10 +571,11 @@
     ui.gain.textContent = `+${fmt(result ? result.gain : 0)}`;
 
     ui.rolls.textContent = fmt(state.totalRolls);
-    ui.earned.textContent = fmt(state.totalEarned);
+    ui.runPoints.textContent = fmt(state.runPointsEarned);
     ui.best.textContent = fmt(state.bestGain);
     renderCombos();
     renderUpgrades();
+    renderPrestige();
   }
 
   function bindModal(openButton, modal, closeButton) {
@@ -500,10 +589,12 @@
   ui.roll.addEventListener("click", roll);
   ui.generalUpgradesTab.addEventListener("click", () => setUpgradeTab("general"));
   ui.comboMasteriesTab.addEventListener("click", () => setUpgradeTab("masteries"));
+  ui.confirmPrestige.addEventListener("click", performPrestige);
   bindModal(ui.combosButton, ui.combosModal, ui.closeCombos);
   bindModal(ui.upgradesButton, ui.upgradesModal, ui.closeUpgrades);
+  bindModal(ui.prestigeButton, ui.prestigeModal, ui.closePrestige);
   ui.reset.addEventListener("click", () => {
-    if (!window.confirm("Réinitialiser toute la progression ?")) return;
+    if (!window.confirm("Réinitialiser toute la progression, Gemmes comprises ?")) return;
     state = freshState();
     activeUpgradeTab = "general";
     setUpgradeTab(activeUpgradeTab);
