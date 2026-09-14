@@ -27,6 +27,16 @@
   }
 
   async function boot() {
+    // L'index peut encore avoir une ancienne config en cache. Recharge uniquement si nécessaire,
+    // avec le BUILD courant, avant que les modules runtime ne capturent NightIdleConfig.
+    if ((Number(window.NightIdleConfig?.version) || 0) < 8) {
+      try {
+        await loadScript("js/config.js");
+      } catch (error) {
+        console.warn("[Night Idle] Nouvelle configuration indisponible, poursuite avec la version locale.", error);
+      }
+    }
+
     try {
       if (window.NightIdleOfflineReady && typeof window.NightIdleOfflineReady.then === "function") {
         await window.NightIdleOfflineReady;
