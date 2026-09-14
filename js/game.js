@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-achievements1";
+  const BUILD = "20260914-achievements2";
 
   // Supprime totalement le flash/tap highlight natif Android/Chrome sur l'interface.
   // Le focus clavier reste géré séparément avec :focus-visible dans les CSS du jeu.
@@ -193,7 +193,7 @@
   }
 
   async function boot() {
-    if ((Number(window.NightIdleConfig?.version) || 0) < 13) {
+    if ((Number(window.NightIdleConfig?.version) || 0) < 14) {
       try {
         await loadScript("js/config.js");
       } catch (error) {
@@ -261,9 +261,11 @@
     }
 
     try {
-      await loadScript("js/achievements.js");
+      await loadScript("js/achievement-data-v2.js");
+      await loadScript("js/achievement-core-v2.js");
+      await loadScript("js/achievement-ui-v2.js");
     } catch (error) {
-      console.warn("[Night Idle] Système de Succès indisponible, poursuite du boot.", error);
+      console.warn("[Night Idle] Système de Succès étendu indisponible, poursuite du boot.", error);
     }
 
     try {
