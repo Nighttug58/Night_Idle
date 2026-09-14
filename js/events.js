@@ -1,11 +1,13 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-events1";
-  const BASE_PROC_CHANCE = 0.025;
+  const BUILD = "20260914-events2";
+  const SAVE_KEY = "nightIdle.save.v1";
+  const UNLOCK_SKILL_ID = "anomaly_unlock";
+  const BASE_PROC_CHANCE = 0.005;
   const AUTO_CHANCE_FACTOR = 0.5;
-  const PITY_START_ROLLS = 30;
-  const PITY_NEAR_GUARANTEE_ROLLS = 85;
+  const PITY_START_ROLLS = 150;
+  const PITY_NEAR_GUARANTEE_ROLLS = 425;
   const PITY_MAX_CHANCE = 0.95;
   const PROC_COOLDOWN_ROLLS = 6;
   const MAX_ACTIVE_SLOTS = 2;
@@ -82,11 +84,21 @@
   let active = [];
   let rollsSinceProc = 0;
   let cooldownRolls = 0;
-  let lastProcChance = BASE_PROC_CHANCE;
+  let lastProcChance = 0;
   let bannerTimer = 0;
 
   function clamp01(value) {
     return Math.max(0, Math.min(1, Number(value) || 0));
+  }
+
+  function eventsUnlocked() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      const save = raw ? JSON.parse(raw) : null;
+      return Math.max(0, Math.floor(Number(save?.prestigeUpgrades?.[UNLOCK_SKILL_ID]) || 0)) >= 1;
+    } catch {
+      return false;
+    }
   }
 
   function definition(id) {
@@ -135,6 +147,8 @@
   }
 
   function procChance(isManual) {
+    if (!eventsUnlocked()) return 0;
+
     const modeFactor = isManual ? 1 : AUTO_CHANCE_FACTOR;
     const base = BASE_PROC_CHANCE * modeFactor * frenzyChanceFactor();
 
@@ -218,6 +232,14 @@
 
   function tryProc(isManual, values) {
     cleanupExpired();
+
+    if (!eventsUnlocked()) {
+      rollsSinceProc = 0;
+      cooldownRolls = 0;
+      lastProcChance = 0;
+      return null;
+    }
+
     rollsSinceProc += 1;
 
     if (cooldownRolls > 0) {
@@ -312,7 +334,7 @@
     active = [];
     rollsSinceProc = 0;
     cooldownRolls = 0;
-    lastProcChance = BASE_PROC_CHANCE;
+    lastProcChance = eventsUnlocked() ? BASE_PROC_CHANCE : 0;
     if (bannerTimer) window.clearTimeout(bannerTimer);
     bannerTimer = 0;
     if (banner) {
@@ -340,8 +362,9 @@
   renderActive();
 
   window.NightIdleEvents = Object.freeze({
-    version: 1,
+    version: 2,
     definitions: DEFINITIONS,
+    unlocked: eventsUnlocked,
     effectiveSum,
     comboMultiplier,
     gainMultiplier,
