@@ -16,9 +16,7 @@
   --dice-zone-height: clamp(150px, 24dvh, 190px);
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html,
 body {
@@ -32,20 +30,12 @@ body {
 
 body {
   min-height: 100dvh;
-  background:
-    radial-gradient(circle at top, rgba(138, 125, 255, 0.14), transparent 34rem),
-    #0b0e13;
+  background: radial-gradient(circle at top, rgba(138, 125, 255, 0.14), transparent 34rem), #0b0e13;
   color: #f5f7fb;
 }
 
-button {
-  font: inherit;
-}
-
-button:focus-visible {
-  outline: 3px solid rgba(165, 156, 255, 0.55);
-  outline-offset: 3px;
-}
+button { font: inherit; }
+button:focus-visible { outline: 3px solid rgba(165, 156, 255, 0.55); outline-offset: 3px; }
 
 .app-shell {
   display: grid;
@@ -54,10 +44,7 @@ button:focus-visible {
   width: min(100%, 760px);
   height: 100dvh;
   margin: 0 auto;
-  padding:
-    max(10px, env(safe-area-inset-top))
-    16px
-    max(10px, env(safe-area-inset-bottom));
+  padding: max(10px, env(safe-area-inset-top)) 16px max(10px, env(safe-area-inset-bottom));
   overflow: hidden;
 }
 
@@ -65,34 +52,23 @@ button:focus-visible {
 .section-heading,
 .heading-actions,
 .footer-actions,
-.modal-header {
+.modal-header,
+.upgrade-title-row,
+.upgrade-balance {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
 }
 
-.topbar {
-  min-height: 54px;
-  padding: 0 2px;
-  flex: 0 0 auto;
-}
-
+.topbar { min-height: 54px; padding: 0 2px; }
 .topbar > div:first-child,
-.section-heading > div:first-child {
-  min-width: 0;
-}
-
-.heading-actions {
-  flex: 0 0 auto;
-  gap: 8px;
-}
+.section-heading > div:first-child { min-width: 0; }
+.heading-actions { flex: 0 0 auto; gap: 5px; }
 
 h1,
 h2,
-p {
-  margin: 0;
-}
+p { margin: 0; }
 
 h1 {
   margin-top: 2px;
@@ -133,11 +109,7 @@ h2 {
 }
 
 .points-label,
-.muted {
-  display: block;
-  color: var(--muted);
-  font-size: 0.7rem;
-}
+.muted { display: block; color: var(--muted); font-size: 0.7rem; }
 
 .points-panel strong {
   display: block;
@@ -168,29 +140,21 @@ h2 {
   overflow: hidden;
 }
 
-.section-heading {
-  height: 42px;
-  min-height: 42px;
-  overflow: hidden;
-}
+.section-heading { height: 42px; min-height: 42px; overflow: hidden; }
 
 .dice-count,
 .icon-button {
-  padding: 7px 10px;
+  padding: 6px 8px;
   border: 0;
   border-radius: 999px;
   background: var(--surface-2);
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.65rem;
   font-weight: 800;
   white-space: nowrap;
 }
 
-.icon-button {
-  cursor: pointer;
-  color: var(--accent-strong);
-  letter-spacing: 0.05em;
-}
+.icon-button { cursor: pointer; color: var(--accent-strong); letter-spacing: 0.04em; }
 
 .dice-tray {
   display: grid;
@@ -228,9 +192,7 @@ h2 {
   user-select: none;
 }
 
-.die.is-rolling {
-  animation: die-pop 180ms ease-out;
-}
+.die.is-rolling { animation: die-pop 180ms ease-out; }
 
 .locked-die {
   grid-template-rows: 1fr auto;
@@ -243,12 +205,7 @@ h2 {
   cursor: not-allowed;
 }
 
-.locked-die .lock-icon {
-  align-self: end;
-  font-size: clamp(1.55rem, 7vw, 2.7rem);
-  filter: grayscale(0.25);
-}
-
+.locked-die .lock-icon { align-self: end; font-size: clamp(1.55rem, 7vw, 2.7rem); }
 .locked-die small {
   width: 100%;
   align-self: end;
@@ -268,9 +225,7 @@ h2 {
   box-shadow: 0 0 0 1px rgba(138, 125, 255, 0.12), 0 10px 28px rgba(0, 0, 0, 0.16);
 }
 
-.locked-die:disabled {
-  opacity: 0.62;
-}
+.locked-die:disabled { opacity: 0.62; }
 
 @keyframes die-pop {
   0% { transform: scale(0.86) rotate(-5deg); opacity: 0.7; }
@@ -298,24 +253,8 @@ h2 {
   background: var(--surface-2);
 }
 
-.result-panel span {
-  display: block;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 0.61rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.result-panel strong {
-  display: block;
-  width: 100%;
-  margin-top: 2px;
-  overflow: hidden;
-  font-size: 0.86rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+.result-panel span { display: block; overflow: hidden; color: var(--muted); font-size: 0.61rem; text-overflow: ellipsis; white-space: nowrap; }
+.result-panel strong { display: block; width: 100%; margin-top: 2px; overflow: hidden; font-size: 0.86rem; text-overflow: ellipsis; white-space: nowrap; }
 
 .result-panel .gain-box {
   grid-column: 1 / -1;
@@ -326,13 +265,7 @@ h2 {
   border: 1px solid rgba(138, 125, 255, 0.22);
 }
 
-.gain-box strong {
-  width: auto;
-  max-width: 70%;
-  color: var(--success);
-  font-size: 1.2rem;
-  text-align: right;
-}
+.gain-box strong { width: auto; max-width: 70%; color: var(--success); font-size: 1.2rem; text-align: right; }
 
 .primary-button {
   width: 100%;
@@ -346,14 +279,13 @@ h2 {
   font-size: 0.95rem;
   font-weight: 900;
   letter-spacing: 0.06em;
-  transition: transform 100ms ease, opacity 100ms ease, filter 100ms ease;
+  transition: transform 100ms ease;
 }
 
 .primary-button:active,
 .icon-button:active,
-.locked-die.is-affordable:active {
-  transform: scale(0.98);
-}
+.locked-die.is-affordable:active,
+.upgrade-buy:not(:disabled):active { transform: scale(0.98); }
 
 .stats-grid {
   display: grid;
@@ -375,54 +307,17 @@ h2 {
   background: rgba(20, 25, 34, 0.82);
 }
 
-.stat-card span {
-  display: block;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 0.63rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+.stat-card span { display: block; overflow: hidden; color: var(--muted); font-size: 0.63rem; text-overflow: ellipsis; white-space: nowrap; }
+.stat-card strong { display: block; width: 100%; margin-top: 4px; overflow: hidden; font-size: 0.92rem; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
 
-.stat-card strong {
-  display: block;
-  width: 100%;
-  margin-top: 4px;
-  overflow: hidden;
-  font-size: 0.92rem;
-  font-variant-numeric: tabular-nums;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+.footer-actions { min-height: 24px; padding: 0 4px; overflow: hidden; color: var(--muted); font-size: 0.68rem; white-space: nowrap; }
+.footer-actions > span { overflow: hidden; text-overflow: ellipsis; }
 
-.footer-actions {
-  min-height: 24px;
-  padding: 0 4px;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 0.68rem;
-  white-space: nowrap;
-}
-
-.footer-actions > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.text-button {
-  flex: 0 0 auto;
-  padding: 4px 0;
-  border: 0;
-  background: transparent;
-  color: var(--danger);
-  cursor: pointer;
-  font-size: 0.68rem;
-  white-space: nowrap;
-}
+.text-button { flex: 0 0 auto; padding: 4px 0; border: 0; background: transparent; color: var(--danger); cursor: pointer; font-size: 0.68rem; white-space: nowrap; }
 
 .modal {
-  width: min(92vw, 560px);
-  max-height: 82dvh;
+  width: min(92vw, 580px);
+  max-height: 84dvh;
   padding: 0;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -432,23 +327,17 @@ h2 {
   box-shadow: 0 26px 80px rgba(0, 0, 0, 0.5);
 }
 
-.modal::backdrop {
-  background: rgba(3, 5, 8, 0.72);
-  backdrop-filter: blur(4px);
-}
+.modal::backdrop { background: rgba(3, 5, 8, 0.72); backdrop-filter: blur(4px); }
 
 .modal-card {
   display: flex;
-  max-height: 82dvh;
+  max-height: 84dvh;
   padding: 18px;
   overflow: hidden;
   flex-direction: column;
 }
 
-.modal-header {
-  flex: 0 0 auto;
-  padding-bottom: 14px;
-}
+.modal-header { flex: 0 0 auto; padding-bottom: 14px; }
 
 .modal-close {
   display: grid;
@@ -465,13 +354,14 @@ h2 {
   line-height: 1;
 }
 
-.combos-list {
-  display: grid;
-  gap: 8px;
+.modal-scroll {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
+
+.combos-list { display: grid; gap: 8px; }
 
 .combo-row {
   display: grid;
@@ -483,201 +373,110 @@ h2 {
   background: var(--surface-2);
 }
 
-.combo-row.is-locked {
-  opacity: 0.36;
+.combo-row.is-locked { opacity: 0.36; }
+.combo-row .combo-name { overflow: hidden; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.combo-row .combo-example { color: var(--muted); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
+.combo-row .combo-multiplier { min-width: 54px; color: var(--accent-strong); text-align: right; font-weight: 850; }
+
+.upgrades-list { display: flex; flex-direction: column; gap: 10px; padding-right: 2px; }
+
+.upgrade-balance {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 10px 12px;
+  border: 1px solid rgba(138, 125, 255, 0.22);
+  border-radius: 13px;
+  background: rgba(20, 25, 34, 0.96);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
 }
 
-.combo-row .combo-name {
-  overflow: hidden;
-  font-weight: 750;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+.upgrade-balance span { color: var(--muted); font-size: 0.72rem; }
+.upgrade-balance strong { color: var(--success); font-variant-numeric: tabular-nums; }
 
-.combo-row .combo-example {
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.combo-row .combo-multiplier {
-  min-width: 48px;
+.upgrade-section-title {
+  margin-top: 4px;
   color: var(--accent-strong);
-  text-align: right;
-  font-weight: 850;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
+
+.upgrade-stack { display: grid; gap: 8px; }
+
+.upgrade-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 116px;
+  gap: 10px;
+  align-items: stretch;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--surface-2);
+}
+
+.upgrade-card.is-locked { opacity: 0.45; }
+.upgrade-info { min-width: 0; }
+.upgrade-title-row { gap: 8px; }
+.upgrade-title-row strong { overflow: hidden; font-size: 0.88rem; text-overflow: ellipsis; white-space: nowrap; }
+.upgrade-title-row span { flex: 0 0 auto; color: var(--muted); font-size: 0.68rem; font-weight: 800; }
+.upgrade-info p { margin-top: 4px; color: var(--muted); font-size: 0.68rem; line-height: 1.28; }
+.upgrade-effect { margin-top: 7px; color: #d5d9e2; font-size: 0.72rem; }
+.upgrade-effect strong { color: var(--success); }
+
+.upgrade-buy {
+  display: flex;
+  min-width: 0;
+  padding: 9px 8px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), #6658ff);
+  color: white;
+  cursor: pointer;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.upgrade-buy strong { margin-top: 3px; font-size: 0.72rem; font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.upgrade-buy:disabled { background: var(--surface-3); color: #788497; cursor: not-allowed; opacity: 0.75; }
 
 @media (max-width: 520px) {
-  :root {
-    --dice-zone-height: clamp(146px, 23dvh, 176px);
-  }
-
-  .app-shell {
-    padding-inline: 12px;
-  }
-
-  .game-card {
-    border-radius: 19px;
-  }
-
-  .section-heading {
-    gap: 10px;
-  }
-
-  .heading-actions {
-    gap: 5px;
-  }
-
+  :root { --dice-zone-height: clamp(146px, 23dvh, 176px); }
+  .app-shell { padding-inline: 12px; }
+  .game-card { border-radius: 19px; }
+  .section-heading { gap: 8px; }
+  .heading-actions { gap: 4px; }
   .dice-count,
-  .icon-button {
-    padding: 6px 8px;
-    font-size: 0.64rem;
-  }
+  .icon-button { padding: 5px 6px; font-size: 0.57rem; }
+  .die { border-radius: 18px; }
+  .modal-card { padding: 15px; }
+  .combo-row { gap: 7px; padding-inline: 10px; }
+  .upgrade-card { grid-template-columns: minmax(0, 1fr) 96px; gap: 8px; padding: 9px; }
+  .upgrade-buy { padding-inline: 6px; font-size: 0.6rem; }
+}
 
-  .die {
-    width: min(100%, 82px);
-    height: min(100%, 82px);
-    border-radius: 17px;
-    font-size: clamp(2.5rem, 12vw, 4rem);
-  }
-
-  .footer-actions {
-    gap: 8px;
-  }
-
-  .modal-card {
-    padding: 15px;
-  }
-
-  .combo-row {
-    gap: 7px;
-    padding-inline: 10px;
-  }
+@media (max-height: 690px) {
+  :root { --page-gap: 6px; --dice-zone-height: 142px; }
+  .app-shell { padding-top: max(7px, env(safe-area-inset-top)); padding-bottom: max(7px, env(safe-area-inset-bottom)); }
+  .topbar { min-height: 46px; }
+  h1 { font-size: 1.35rem; }
+  .points-panel { padding-block: 6px; }
+  .roll-card { grid-template-rows: 38px var(--dice-zone-height) 88px 50px; gap: 6px; }
+  .section-heading { height: 38px; min-height: 38px; }
+  .result-panel { height: 88px; min-height: 88px; grid-template-rows: 40px 40px; }
+  .primary-button { height: 50px; min-height: 50px; }
+  .stats-grid,
+  .stat-card { height: 54px; min-height: 54px; }
+  .stat-card { padding-block: 7px; }
+  .footer-actions { min-height: 20px; font-size: 0.62rem; }
 }
 
 @media (min-width: 620px) {
-  :root {
-    --dice-zone-height: clamp(104px, 17dvh, 132px);
-  }
-
-  .dice-tray {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    grid-template-rows: 1fr;
-  }
-
-  .die {
-    width: min(100%, 96px);
-    height: min(100%, 96px);
-    border-radius: 18px;
-    font-size: 4rem;
-  }
-}
-
-@media (max-height: 700px) {
-  :root {
-    --page-gap: 6px;
-    --dice-zone-height: 132px;
-  }
-
-  .app-shell {
-    padding-top: max(6px, env(safe-area-inset-top));
-    padding-bottom: max(6px, env(safe-area-inset-bottom));
-  }
-
-  .topbar {
-    min-height: 46px;
-  }
-
-  h1 {
-    font-size: 1.35rem;
-  }
-
-  .game-card {
-    padding: 10px 12px;
-  }
-
-  .roll-card {
-    grid-template-rows: 38px var(--dice-zone-height) 86px 48px;
-    gap: 6px;
-  }
-
-  .section-heading {
-    height: 38px;
-    min-height: 38px;
-  }
-
-  .result-panel {
-    grid-template-rows: 40px 40px;
-    height: 86px;
-    min-height: 86px;
-    gap: 6px;
-  }
-
-  .primary-button {
-    height: 48px;
-    min-height: 48px;
-  }
-
-  .stats-grid,
-  .stat-card {
-    height: 54px;
-    min-height: 54px;
-  }
-
-  .stat-card {
-    padding: 7px 9px;
-  }
-
-  .footer-actions {
-    min-height: 20px;
-    font-size: 0.62rem;
-  }
-
-  .text-button {
-    font-size: 0.62rem;
-  }
-}
-
-@media (max-height: 600px) {
-  :root {
-    --dice-zone-height: 112px;
-  }
-
-  .topbar {
-    min-height: 40px;
-  }
-
-  .points-panel {
-    padding-block: 6px;
-  }
-
-  .roll-card {
-    grid-template-rows: 34px var(--dice-zone-height) 78px 44px;
-  }
-
-  .section-heading {
-    height: 34px;
-    min-height: 34px;
-  }
-
-  .result-panel {
-    grid-template-rows: 36px 36px;
-    height: 78px;
-    min-height: 78px;
-  }
-
-  .primary-button {
-    height: 44px;
-    min-height: 44px;
-  }
-
-  .stats-grid,
-  .stat-card {
-    height: 48px;
-    min-height: 48px;
-  }
-
-  .footer-actions > span {
-    display: none;
-  }
+  .dice-tray { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .die { width: min(100%, 90px); height: min(100%, 90px); font-size: 4rem; }
 }
