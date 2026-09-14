@@ -10,6 +10,9 @@
   display: grid;
   gap: 10px;
   min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
 }
 
 .offline-highlight {
@@ -71,10 +74,22 @@
 }
 
 .offline-note {
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.025);
   color: var(--muted);
   font-size: 0.68rem;
-  line-height: 1.4;
-  text-align: center;
+  line-height: 1.48;
+  text-align: left;
+}
+
+.offline-note strong {
+  color: #f5f7fb;
+}
+
+#claimOfflineButton {
+  flex: 0 0 auto;
 }
 
 @media (max-width: 420px) {
@@ -88,5 +103,24 @@
 
   .offline-highlight strong {
     font-size: 1.35rem;
+  }
+
+  .offline-note {
+    padding: 9px 10px;
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-height: 620px) {
+  .offline-modal-card {
+    max-height: 92dvh;
+  }
+
+  .offline-highlight {
+    padding: 10px;
+  }
+
+  .offline-grid > div {
+    padding-block: 7px;
   }
 }
