@@ -8,17 +8,13 @@
   const SNAPSHOT_KEY = "nightIdle.offline.snapshot.v1";
   const TEST_KEY = "nightIdle.storage.test";
   const ERROR_KEY = "nightIdle.last.error";
+  const CORRUPT_PREFIX = "nightIdle.save.corrupt";
 
   function rememberError(kind, error) {
     try {
       const message = error?.message || String(error || "Erreur inconnue");
       const stack = error?.stack || "";
-      sessionStorage.setItem(ERROR_KEY, JSON.stringify({
-        kind,
-        message,
-        stack,
-        at: Date.now()
-      }));
+      sessionStorage.setItem(ERROR_KEY, JSON.stringify({ kind, message, stack, at: Date.now() }));
     } catch {
       // Le diagnostic ne doit jamais devenir une nouvelle source d'erreur.
     }
@@ -44,10 +40,99 @@
   }
 
   const hasStorage = storageAvailable();
+  let recoveredCorruptSave = false;
+
+  function prepareSaveBeforeBoot() {
+    if (!hasStorage) return;
+
+    let raw = null;
+    try {
+      raw = localStorage.getItem(SAVE_KEY);
+    } catch (error) {
+      rememberError("save-read", error);
+      return;
+    }
+    if (!raw) return;
+
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (error) {
+      recoveredCorruptSave = true;
+      rememberError("save-corrupt", error);
+      try {
+        localStorage.setItem(`${CORRUPT_PREFIX}.${Date.now()}`, raw);
+        localStorage.removeItem(SAVE_KEY);
+        localStorage.removeItem(SNAPSHOT_KEY);
+      } catch (backupError) {
+        rememberError("save-backup", backupError);
+      }
+      return;
+    }
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      recoveredCorruptSave = true;
+      try {
+        localStorage.setItem(`${CORRUPT_PREFIX}.${Date.now()}`, raw);
+        localStorage.removeItem(SAVE_KEY);
+        localStorage.removeItem(SNAPSHOT_KEY);
+      } catch (error) {
+        rememberError("save-shape", error);
+      }
+      return;
+    }
+
+    const currentVersion = Math.max(1, Number(CONFIG.version) || 1);
+    const savedVersion = Math.max(0, Number(parsed.saveVersion) || 0);
+
+    if (savedVersion > currentVersion) {
+      console.warn(`[Night Idle] Save plus récente que le jeu (${savedVersion} > ${currentVersion}).`);
+      return;
+    }
+
+    // Migration douce : la structure détaillée reste gérée par game-core.js,
+    // on ajoute ici uniquement les métadonnées communes à toutes les versions.
+    parsed.saveVersion = currentVersion;
+    if (!Number.isFinite(Number(parsed.lastSaveAt))) parsed.lastSaveAt = Date.now();
+
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(parsed));
+    } catch (error) {
+      rememberError("save-migration", error);
+    }
+  }
+
+  prepareSaveBeforeBoot();
+
+  // offline.js a déjà installé son timestamp automatique. On l'enveloppe pour
+  // ajouter le numéro de version sans casser son comportement existant.
+  const storageProto = window.Storage?.prototype;
+  const inheritedSetItem = storageProto?.setItem;
+  if (storageProto && inheritedSetItem) {
+    try {
+      storageProto.setItem = function nightIdleVersionedSetItem(key, value) {
+        try {
+          if (this === localStorage && key === SAVE_KEY) {
+            const parsed = JSON.parse(value);
+            if (parsed && typeof parsed === "object") {
+              parsed.saveVersion = Math.max(1, Number(CONFIG.version) || 1);
+              value = JSON.stringify(parsed);
+            }
+          }
+          return inheritedSetItem.call(this, key, value);
+        } catch (error) {
+          rememberError("save-write", error);
+          return undefined;
+        }
+      };
+    } catch (error) {
+      rememberError("save-wrapper", error);
+    }
+  }
 
   // Les seuls timeouts récurrents du jeu sont actuellement ceux de l'Auto Clicker.
-  // On les empêche de produire lorsque l'onglet est réellement masqué : le revenu
-  // hors ligne reste alors l'unique propriétaire de cette période.
+  // Ils sont gelés lorsque la page est cachée pour laisser l'offline être l'unique
+  // propriétaire de cette période.
   const autoIntervals = new Set(
     (CONFIG.prestigeShop.find((upgrade) => upgrade.id === "auto_clicker")?.intervalsMs || [])
       .map((value) => Number(value))
@@ -163,4 +248,11 @@
       makeRecoveryBanner(detail);
     }
   }, 1375);
+
+  window.NightIdleStabilityStatus = Object.freeze({
+    enabled: true,
+    storageAvailable: hasStorage,
+    recoveredCorruptSave,
+    saveVersion: Math.max(1, Number(CONFIG.version) || 1)
+  });
 })();
