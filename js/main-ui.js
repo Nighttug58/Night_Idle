@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-mainui2";
+  const BUILD = "20260914-mainui3";
   const stylesheet = document.createElement("link");
   stylesheet.rel = "stylesheet";
   stylesheet.href = `main-ui.css?v=${BUILD}`;
@@ -27,6 +27,54 @@
       event.preventDefault();
       triggerRoll(event);
     });
+  }
+
+  const root = document.documentElement;
+  const topbar = document.querySelector(".topbar");
+  const requestFullscreen = root?.requestFullscreen || root?.webkitRequestFullscreen;
+  const exitFullscreen = document.exitFullscreen || document.webkitExitFullscreen;
+  let fullscreenButton = null;
+
+  function currentFullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+
+  function renderFullscreenButton() {
+    if (!fullscreenButton) return;
+    const active = Boolean(currentFullscreenElement());
+    fullscreenButton.classList.toggle("is-active", active);
+    fullscreenButton.textContent = active ? "↙" : "⛶";
+    fullscreenButton.setAttribute("aria-label", active ? "Quitter le plein écran" : "Passer en plein écran");
+    fullscreenButton.title = active ? "Quitter le plein écran" : "Plein écran";
+  }
+
+  async function toggleFullscreen() {
+    try {
+      if (currentFullscreenElement()) {
+        if (typeof exitFullscreen === "function") await exitFullscreen.call(document);
+      } else if (typeof requestFullscreen === "function") {
+        await requestFullscreen.call(root);
+      }
+    } catch (error) {
+      console.warn("[Night Idle] Plein écran indisponible", error);
+    }
+    renderFullscreenButton();
+  }
+
+  if (topbar && typeof requestFullscreen === "function") {
+    fullscreenButton = document.createElement("button");
+    fullscreenButton.id = "fullscreenButton";
+    fullscreenButton.className = "fullscreen-button";
+    fullscreenButton.type = "button";
+    fullscreenButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleFullscreen();
+    });
+    topbar.prepend(fullscreenButton);
+    renderFullscreenButton();
+
+    document.addEventListener("fullscreenchange", renderFullscreenButton);
+    document.addEventListener("webkitfullscreenchange", renderFullscreenButton);
   }
 
   function alphabeticSuffix(index) {
