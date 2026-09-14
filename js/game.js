@@ -262,6 +262,7 @@
 
     try {
       await loadScript("js/achievement-data-v2.js");
+      await loadScript("js/achievement-compat-v2.js");
       await loadScript("js/achievement-core-v2.js");
       await loadScript("js/achievement-ui-v2.js");
     } catch (error) {
