@@ -14,9 +14,17 @@
         <p class="eyebrow">NIGHT IDLE</p>
         <h1>Dice Run</h1>
       </div>
-      <div class="points-panel" aria-live="polite">
-        <span class="points-label">Points</span>
-        <strong id="pointsValue">0</strong>
+
+      <div class="currencies-panel" aria-live="polite">
+        <div class="currency-block">
+          <span>Points</span>
+          <strong id="pointsValue">0</strong>
+        </div>
+        <div class="currency-divider" aria-hidden="true"></div>
+        <div class="currency-block gem-currency">
+          <span>Gemmes</span>
+          <strong id="gemsValue">0</strong>
+        </div>
       </div>
     </header>
 
@@ -57,14 +65,14 @@
       <button id="rollButton" class="primary-button" type="button">LANCER</button>
     </section>
 
-    <section class="stats-grid" aria-label="Statistiques">
+    <section class="stats-grid" aria-label="Statistiques du run">
       <article class="stat-card">
         <span>Lancers</span>
         <strong id="totalRollsValue">0</strong>
       </article>
       <article class="stat-card">
-        <span>Points gagnés</span>
-        <strong id="totalEarnedValue">0</strong>
+        <span>Points du run</span>
+        <strong id="runPointsValue">0</strong>
       </article>
       <article class="stat-card">
         <span>Meilleur gain</span>
@@ -73,8 +81,11 @@
     </section>
 
     <footer class="footer-actions">
-      <span>Sauvegarde locale automatique</span>
-      <button id="resetButton" class="text-button" type="button">Réinitialiser la partie</button>
+      <span id="prestigeStatusText">Prestige verrouillé</span>
+      <div class="footer-buttons">
+        <button id="prestigeButton" class="prestige-button" type="button" aria-haspopup="dialog">PRESTIGE 🔒</button>
+        <button id="resetButton" class="text-button" type="button">Réinitialiser</button>
+      </div>
     </footer>
   </main>
 
@@ -119,6 +130,57 @@
         <section id="comboMasteriesPanel" class="upgrade-tab-panel" role="tabpanel" aria-labelledby="comboMasteriesTab" hidden>
           <div id="comboUpgradesList" class="upgrade-stack"></div>
         </section>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="prestigeModal" class="modal" aria-labelledby="prestigeTitle">
+    <div class="modal-card prestige-modal-card">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">PROGRESSION PERMANENTE</p>
+          <h2 id="prestigeTitle">Prestige</h2>
+        </div>
+        <button id="closePrestigeButton" class="modal-close" type="button" aria-label="Fermer">×</button>
+      </div>
+
+      <div class="prestige-content">
+        <div class="prestige-summary">
+          <div>
+            <span>Gemmes actuelles</span>
+            <strong id="prestigeCurrentGems">0</strong>
+          </div>
+          <div>
+            <span>Prestiges</span>
+            <strong id="prestigeCountValue">0</strong>
+          </div>
+        </div>
+
+        <div class="prestige-requirements">
+          <div class="prestige-requirement">
+            <span>6 dés requis</span>
+            <strong id="prestigeDiceStatus">1/6</strong>
+          </div>
+          <div class="prestige-requirement">
+            <span>Tous les combos requis</span>
+            <strong id="prestigeCombosStatus">0/12</strong>
+          </div>
+        </div>
+
+        <div class="prestige-run-total">
+          <span>Points gagnés pendant ce run</span>
+          <strong id="prestigeRunPointsValue">0</strong>
+        </div>
+
+        <div class="prestige-reward">
+          <span>Prestige maintenant</span>
+          <strong id="prestigeRewardValue">+0 Gemme</strong>
+        </div>
+
+        <p class="prestige-formula">Gain : ⌊5 × √(points du run / 1 000 000)⌋ Gemmes.</p>
+        <p class="prestige-warning">Le Prestige remet à zéro les points, dés, combos, améliorations et statistiques du run. Les Gemmes sont conservées.</p>
+
+        <button id="confirmPrestigeButton" class="primary-button prestige-confirm" type="button" disabled>PRESTIGE VERROUILLÉ</button>
       </div>
     </div>
   </dialog>
