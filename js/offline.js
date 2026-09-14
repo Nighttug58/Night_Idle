@@ -6,7 +6,8 @@
 
   const SAVE_KEY = "nightIdle.save.v1";
   const SNAPSHOT_KEY = "nightIdle.offline.snapshot.v1";
-  const PENDING_KEY = "nightIdle.offline.pending.v1";
+  const PENDING_KEY = "nightIdle.offline.pending.v2";
+  const LEGACY_PENDING_KEY = "nightIdle.offline.pending.v1";
   const minimumOfflineMs = Math.max(0, Number(CONFIG?.prestige?.minimumOfflineMs) || 0);
 
   const storageProto = window.Storage?.prototype;
@@ -23,12 +24,22 @@
     return storage.removeItem(key);
   }
 
-  function readJson(storage, key) {
+  function readRaw(storage, key) {
     try {
-      const raw = storage.getItem(key);
-      return raw ? JSON.parse(raw) : null;
+      return storage.getItem(key);
     } catch (error) {
       console.warn("[Night Idle] Lecture stockage offline impossible", error);
+      return null;
+    }
+  }
+
+  function readJson(storage, key) {
+    const raw = readRaw(storage, key);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch (error) {
+      console.warn("[Night Idle] JSON offline invalide", error);
       return null;
     }
   }
@@ -43,6 +54,16 @@
       console.warn("[Night Idle] Écriture sauvegarde offline impossible", error);
       return false;
     }
+  }
+
+  function fingerprint(raw) {
+    const text = String(raw || "");
+    let hash = 2166136261;
+    for (let i = 0; i < text.length; i += 1) {
+      hash ^= text.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return `${text.length}:${hash >>> 0}`;
   }
 
   function prestigeUpgrade(id) {
@@ -130,8 +151,8 @@
   function hasStraight(counts, length) {
     const faces = [...counts.keys()].sort((a, b) => a - b);
     let run = 1;
-    for (let index = 1; index < faces.length; index += 1) {
-      run = faces[index] === faces[index - 1] + 1 ? run + 1 : 1;
+    for (let i = 1; i < faces.length; i += 1) {
+      run = faces[i] === faces[i - 1] + 1 ? run + 1 : 1;
       if (run >= length) return true;
     }
     return false;
@@ -139,10 +160,10 @@
 
   function hasFull(counts) {
     const groups = [...counts.values()];
-    for (let first = 0; first < groups.length; first += 1) {
-      if (groups[first] < 3) continue;
-      for (let second = 0; second < groups.length; second += 1) {
-        if (first !== second && groups[second] >= 2) return true;
+    for (let i = 0; i < groups.length; i += 1) {
+      if (groups[i] < 3) continue;
+      for (let j = 0; j < groups.length; j += 1) {
+        if (i !== j && groups[j] >= 2) return true;
       }
     }
     return false;
@@ -153,7 +174,6 @@
     const groups = [...counts.values()];
     const pairGroups = groups.filter((count) => count >= 2).length;
     const tripleGroups = groups.filter((count) => count >= 3).length;
-
     return {
       pair: pairGroups >= 1,
       double_pair: pairGroups >= 2,
@@ -174,7 +194,6 @@
     const matches = comboMatches(values);
     let best = null;
     let bestMultiplier = -Infinity;
-
     CONFIG.combos.forEach((combo) => {
       if (values.length < combo.minDice || !comboUnlocked(save, combo.id) || !matches[combo.id]) return;
       const multiplier = comboMultiplier(save, combo);
@@ -183,13 +202,12 @@
         bestMultiplier = multiplier;
       }
     });
-
     return best;
   }
 
   function encodeRoll(values) {
     let key = 0;
-    for (let index = 0; index < values.length; index += 1) key = key * 7 + values[index];
+    for (let i = 0; i < values.length; i += 1) key = key * 7 + values[i];
     return key;
   }
 
@@ -206,8 +224,7 @@
       const key = encodeRoll(values);
       if (scoreKnown[key]) return scoreCache[key];
       const sum = values.reduce((total, value) => total + value, 0);
-      const combo = bestCombo(save, values);
-      const result = sum * comboMultiplier(save, combo);
+      const result = sum * comboMultiplier(save, bestCombo(save, values));
       scoreKnown[key] = 1;
       scoreCache[key] = result;
       return result;
@@ -225,7 +242,6 @@
       outcomes += 1;
       const originalScore = score(values);
       const originalGain = roundedGain(originalScore);
-
       if (fate <= 0) {
         totalExpectedGain += originalGain;
         return;
@@ -233,16 +249,15 @@
 
       let bestIndex = 0;
       let bestExpectedScore = -Infinity;
-
       for (let dieIndex = 0; dieIndex < diceCount; dieIndex += 1) {
-        let candidateScoreTotal = 0;
+        let total = 0;
         const originalFace = values[dieIndex];
         for (let face = 1; face <= faces; face += 1) {
           values[dieIndex] = face;
-          candidateScoreTotal += score(values);
+          total += score(values);
         }
         values[dieIndex] = originalFace;
-        const expected = candidateScoreTotal / faces;
+        const expected = total / faces;
         if (expected > bestExpectedScore) {
           bestExpectedScore = expected;
           bestIndex = dieIndex;
@@ -257,7 +272,6 @@
         procGainTotal += candidateScore > originalScore ? roundedGain(candidateScore) : originalGain;
       }
       values[bestIndex] = originalFace;
-
       const expectedProcGain = procGainTotal / faces;
       totalExpectedGain += originalGain * (1 - fate) + expectedProcGain * fate;
     }
@@ -282,7 +296,6 @@
     const efficiency = offlineEfficiency(save);
     const reserveMs = reserveMinutes(save) * 60 * 1000;
     const awayMs = Math.max(0, now - departureTimestamp);
-
     if (awayMs < minimumOfflineMs || intervalMs <= 0 || efficiency <= 0) return null;
 
     const countedMs = Math.min(awayMs, reserveMs);
@@ -308,46 +321,60 @@
   }
 
   function validPending(value) {
-    return Boolean(
-      value &&
-      value.version === 1 &&
-      value.report &&
-      Number(value.report.gain) > 0 &&
-      Number(value.report.rolls) > 0
-    );
+    return Boolean(value?.version === 2 && value.baseSave && value.report && Number(value.report.gain) > 0 && Number(value.report.rolls) > 0);
+  }
+
+  function chooseOfflineBase(now) {
+    const saveRaw = readRaw(localStorage, SAVE_KEY);
+    let save = null;
+    try { save = saveRaw ? JSON.parse(saveRaw) : null; } catch { save = null; }
+    const snapshot = readJson(localStorage, SNAPSHOT_KEY);
+
+    if (snapshot?.save && Number(snapshot.hiddenAt) > 0 && now >= Number(snapshot.hiddenAt)) {
+      return {
+        baseSave: snapshot.save,
+        departureTimestamp: Number(snapshot.hiddenAt),
+        mainSaveFingerprint: fingerprint(saveRaw),
+        source: "snapshot"
+      };
+    }
+
+    if (!save || typeof save !== "object") return null;
+    return {
+      baseSave: save,
+      departureTimestamp: Number(save.lastSaveAt) || now,
+      mainSaveFingerprint: fingerprint(saveRaw),
+      source: "save"
+    };
   }
 
   function prepareOfflineClaim() {
     try {
-      const existing = readJson(localStorage, PENDING_KEY);
-      if (validPending(existing)) return existing;
-      if (existing) nativeRemove(localStorage, PENDING_KEY);
-
+      nativeRemove(localStorage, LEGACY_PENDING_KEY);
       const now = Date.now();
-      let save = readJson(localStorage, SAVE_KEY);
-      const snapshot = readJson(localStorage, SNAPSHOT_KEY);
-      let departureTimestamp = Number(save?.lastSaveAt) || now;
-
-      if (snapshot?.save && Number(snapshot.hiddenAt) > 0 && now >= Number(snapshot.hiddenAt)) {
-        save = snapshot.save;
-        departureTimestamp = Number(snapshot.hiddenAt);
-        nativeRemove(localStorage, SNAPSHOT_KEY);
+      const base = chooseOfflineBase(now);
+      if (!base) {
+        nativeRemove(localStorage, PENDING_KEY);
+        return null;
       }
 
-      if (!save) return null;
-
-      const report = calculateOffline(save, now, departureTimestamp);
-
-      // La période est consommée maintenant pour éviter tout double calcul au refresh,
-      // mais les Points restent volontairement non crédités jusqu'au bouton OK.
-      if (!writeSave(save, now)) return null;
-      if (!report) return null;
+      const report = calculateOffline(base.baseSave, now, base.departureTimestamp);
+      if (!report) {
+        nativeRemove(localStorage, PENDING_KEY);
+        nativeRemove(localStorage, SNAPSHOT_KEY);
+        return null;
+      }
 
       const pending = {
-        version: 1,
+        version: 2,
         createdAt: now,
+        departureTimestamp: base.departureTimestamp,
+        mainSaveFingerprint: base.mainSaveFingerprint,
+        source: base.source,
+        baseSave: base.baseSave,
         report
       };
+
       nativeWrite(localStorage, PENDING_KEY, JSON.stringify(pending));
       return pending;
     } catch (error) {
@@ -371,7 +398,6 @@
     resolve(payload);
   }
 
-  // Timestamp automatique sur toutes les futures sauvegardes.
   if (storageProto && nativeSetItem) {
     try {
       storageProto.setItem = function patchedSetItem(key, value) {
@@ -383,7 +409,7 @@
               return nativeSetItem.call(this, key, JSON.stringify(parsed));
             }
           } catch {
-            // Valeur non JSON : conserver le comportement natif.
+            // Conserver le comportement natif pour les valeurs non JSON.
           }
         }
         return nativeSetItem.call(this, key, value);
@@ -408,16 +434,11 @@
   }
 
   function clearSnapshot() {
-    try {
-      nativeRemove(localStorage, SNAPSHOT_KEY);
-    } catch {
-      // Rien à faire.
-    }
+    try { nativeRemove(localStorage, SNAPSHOT_KEY); } catch { /* rien */ }
   }
 
   document.addEventListener("visibilitychange", () => {
     if (pendingClaim) return;
-
     if (document.hidden) {
       captureOfflineSnapshot();
       return;
@@ -426,18 +447,12 @@
     const snapshot = readJson(localStorage, SNAPSHOT_KEY);
     if (!snapshot?.save || !snapshot.hiddenAt) return;
     const awayMs = Date.now() - Number(snapshot.hiddenAt);
-
-    if (
-      awayMs >= minimumOfflineMs &&
-      autoClickInterval(snapshot.save) > 0 &&
-      offlineEfficiency(snapshot.save) > 0
-    ) {
+    if (awayMs >= minimumOfflineMs && autoClickInterval(snapshot.save) > 0 && offlineEfficiency(snapshot.save) > 0) {
       writeSave(snapshot.save, Number(snapshot.hiddenAt));
       clearSnapshot();
       window.location.reload();
       return;
     }
-
     clearSnapshot();
   });
 
@@ -472,7 +487,6 @@
   function patchPrestigeShopLabels() {
     const list = document.getElementById("prestigeShopList");
     if (!list) return;
-
     list.querySelectorAll(".prestige-shop-card").forEach((card) => {
       const name = card.querySelector(".upgrade-title-row strong")?.textContent?.trim();
       const levelText = card.querySelector(".upgrade-title-row span")?.textContent || "";
@@ -503,7 +517,6 @@
   function installSafeShopObserver() {
     const list = document.getElementById("prestigeShopList");
     if (!list || typeof MutationObserver === "undefined") return;
-
     let scheduled = false;
     const observer = new MutationObserver(() => {
       if (scheduled) return;
@@ -515,7 +528,6 @@
         observer.observe(list, { childList: true, subtree: true });
       });
     });
-
     observer.observe(list, { childList: true, subtree: true });
     queueMicrotask(() => {
       observer.disconnect();
@@ -542,7 +554,7 @@
     const report = pending.report;
     const modal = document.getElementById("offlineModal");
     if (!modal) {
-      console.warn("[Night Idle] Modale offline absente : revenu conservé en attente.");
+      console.warn("[Night Idle] Modale offline absente : save principal préservé.");
       finishOfflineBoot(null);
       return;
     }
@@ -551,7 +563,6 @@
       const node = document.getElementById(id);
       if (node) node.textContent = value;
     };
-
     setText("offlineGainValue", `+${formatNumber(report.gain)}`);
     setText("offlineAwayValue", formatDuration(report.awayMs));
     setText("offlineCountedValue", formatDuration(report.countedMs));
@@ -569,10 +580,7 @@
 
     const note = modal.querySelector(".offline-note");
     if (note) {
-      note.innerHTML = `
-        <strong>Calcul :</strong> ${formatNumber(report.rolls)} auto-lancers × ${formatNumber(report.averageGain)} pts moyens × ${formatNumber(report.efficiency * 100)} % d'efficacité = <strong>${formatNumber(report.gain)} pts</strong>.<br>
-        Les probabilités réelles des combos et Chance du Destin sont incluses. <strong>Ces Points sont encore en attente et seront ajoutés seulement après validation.</strong>
-      `;
+      note.innerHTML = `<strong>Calcul :</strong> ${formatNumber(report.rolls)} auto-lancers × ${formatNumber(report.averageGain)} pts moyens × ${formatNumber(report.efficiency * 100)} % = <strong>${formatNumber(report.gain)} pts</strong>.<br>Le save principal n'a pas encore été modifié. Si tu fermes ou si le jeu plante maintenant, cette absence sera recalculée au prochain lancement.`;
     }
 
     const closeButton = document.getElementById("closeOfflineButton");
@@ -582,10 +590,7 @@
     }
 
     const claimButton = document.getElementById("claimOfflineButton");
-    if (claimButton) {
-      claimButton.textContent = `OK — RÉCUPÉRER +${formatNumber(report.gain)} PTS`;
-    }
-
+    if (claimButton) claimButton.textContent = `OK — RÉCUPÉRER +${formatNumber(report.gain)} PTS`;
     modal.addEventListener("cancel", (event) => event.preventDefault());
 
     const claim = () => {
@@ -593,34 +598,34 @@
       claimInProgress = true;
       if (claimButton) {
         claimButton.disabled = true;
-        claimButton.textContent = "CRÉDIT EN COURS…";
+        claimButton.textContent = "VALIDATION…";
       }
 
       try {
         const storedPending = readJson(localStorage, PENDING_KEY);
-        if (!validPending(storedPending)) {
-          pendingClaim = null;
-          if (modal.open) modal.close();
-          finishOfflineBoot(null);
+        if (!validPending(storedPending)) throw new Error("Transaction offline introuvable.");
+
+        const currentMainRaw = readRaw(localStorage, SAVE_KEY);
+        if (fingerprint(currentMainRaw) !== storedPending.mainSaveFingerprint) {
+          nativeRemove(localStorage, PENDING_KEY);
+          window.location.reload();
           return;
         }
 
-        const save = readJson(localStorage, SAVE_KEY);
-        if (!save) throw new Error("Sauvegarde introuvable au moment du crédit.");
-
         const reward = storedPending.report;
-        save.points = Math.max(0, Number(save.points) || 0) + reward.gain;
-        save.runPointsEarned = Math.max(0, Number(save.runPointsEarned ?? save.totalEarned) || 0) + reward.gain;
-        save.totalRolls = Math.max(0, Math.floor(Number(save.totalRolls) || 0)) + reward.rolls;
+        const creditedSave = { ...storedPending.baseSave };
+        creditedSave.points = Math.max(0, Number(creditedSave.points) || 0) + reward.gain;
+        creditedSave.runPointsEarned = Math.max(0, Number(creditedSave.runPointsEarned ?? creditedSave.totalEarned) || 0) + reward.gain;
+        creditedSave.totalRolls = Math.max(0, Math.floor(Number(creditedSave.totalRolls) || 0)) + reward.rolls;
 
-        if (!writeSave(save, Date.now())) throw new Error("Impossible d'écrire la récompense dans la sauvegarde.");
+        if (!writeSave(creditedSave, Date.now())) throw new Error("Impossible d'écrire la récompense dans la sauvegarde.");
         nativeRemove(localStorage, PENDING_KEY);
+        nativeRemove(localStorage, SNAPSHOT_KEY);
         pendingClaim = null;
-
         if (modal.open) modal.close();
         finishOfflineBoot(reward);
       } catch (error) {
-        console.error("[Night Idle] Crédit offline impossible", error);
+        console.error("[Night Idle] Validation offline impossible", error);
         claimInProgress = false;
         if (claimButton) {
           claimButton.disabled = false;
@@ -629,14 +634,12 @@
       }
     };
 
-    claimButton?.addEventListener("click", claim, { once: false });
-
+    claimButton?.addEventListener("click", claim);
     if (typeof modal.showModal === "function") modal.showModal();
     else modal.setAttribute("open", "");
   }
 
   installSafeShopObserver();
-
   window.setTimeout(() => {
     patchPrestigeShopLabels();
     if (pendingClaim) showOfflineReport(pendingClaim);
