@@ -1,5 +1,5 @@
 window.NightIdleConfig = Object.freeze({
-  version: 8,
+  version: 9,
   maxDice: 6,
   dieFaces: 6,
 
@@ -104,11 +104,20 @@ window.NightIdleConfig = Object.freeze({
     Object.freeze({
       id: "cost_curve_mastery",
       name: "Économie d'échelle",
-      description: "Réduit définitivement la croissance exponentielle du prix de toutes les améliorations achetées avec des Points. Les dés et déblocages de combos ne sont pas concernés.",
+      description: "Aplatit définitivement la croissance exponentielle du prix de toutes les améliorations achetées avec des Points. Au niveau 50, toutes les courbes concernées deviennent ×1,10. Les dés et déblocages de combos ne sont pas concernés.",
       maxLevel: 50,
       costs: Object.freeze(Array.from({ length: 50 }, (_, level) => Math.ceil(2 * Math.pow(1.08, level) + level * 0.2))),
-      growthReductionPerLevel: 0.005,
-      maxGrowthReduction: 0.25
+      targetGrowth: 1.10
+    }),
+    Object.freeze({
+      id: "frenzy_mastery",
+      name: "Maîtrise de la Frénésie",
+      description: "Renforce définitivement la Frénésie manuelle : la jauge se remplit plus vite et son multiplicateur maximum augmente à chaque niveau.",
+      maxLevel: 15,
+      costs: Object.freeze([3, 5, 6, 8, 10, 12, 14, 17, 20, 24, 28, 34, 40, 48, 57]),
+      baseMaxMultiplier: 10,
+      maxMultiplierPerLevel: 1,
+      chargeSpeedPerLevel: 0.06
     })
   ]),
 
