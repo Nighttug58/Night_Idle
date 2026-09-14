@@ -1,6 +1,12 @@
 (() => {
   "use strict";
 
+  const BUILD = "20260914-mainui1";
+  const stylesheet = document.createElement("link");
+  stylesheet.rel = "stylesheet";
+  stylesheet.href = `main-ui.css?v=${BUILD}`;
+  document.head.appendChild(stylesheet);
+
   const rollButton = document.getElementById("rollButton");
   const diceTray = document.getElementById("diceTray");
 
@@ -11,6 +17,9 @@
   }
 
   if (diceTray && rollButton) {
+    diceTray.tabIndex = 0;
+    diceTray.setAttribute("role", "button");
+    diceTray.setAttribute("aria-label", "Lancer les dés");
     diceTray.addEventListener("click", triggerRoll);
     diceTray.addEventListener("keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
