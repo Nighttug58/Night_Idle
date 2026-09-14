@@ -1,5 +1,5 @@
 window.NightIdleConfig = Object.freeze({
-  version: 12,
+  version: 13,
   maxDice: 6,
   dieFaces: 6,
 
@@ -16,6 +16,15 @@ window.NightIdleConfig = Object.freeze({
     gemCoefficient: 5,
     minimumGems: 1,
     minimumOfflineMs: 15000
+  }),
+
+  achievementSystem: Object.freeze({
+    tierRewards: Object.freeze([1, 2, 3, 4, 5, 6, 8, 10, 12, 15]),
+    multiplierMaxLevel: 10,
+    multiplierPerLevel: 0.9,
+    multiplierCosts: Object.freeze([50, 75, 105, 140, 180, 225, 275, 330, 390, 474]),
+    maxMultiplier: 10,
+    expectedFamilyCount: 34
   }),
 
   prestigeShop: Object.freeze([
