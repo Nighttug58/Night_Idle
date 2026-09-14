@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-geminf1";
+  const BUILD = "20260914-events1";
 
   // Supprime totalement le flash/tap highlight natif Android/Chrome sur l'interface.
   // Le focus clavier reste géré séparément avec :focus-visible dans les CSS du jeu.
@@ -104,14 +104,52 @@
     return patched;
   }
 
+  function patchFrenzyForEvents(source) {
+    const needle = "    return (oldGain / BAR_FILL_SLOWDOWN) * chargeSpeedMultiplier();";
+    if (!source.includes(needle)) throw new Error("Gain de jauge Frénésie introuvable");
+    return source.replace(
+      needle,
+      "    return (oldGain / BAR_FILL_SLOWDOWN) * chargeSpeedMultiplier() * (window.NightIdleEvents?.frenzyChargeMultiplier?.() || 1);"
+    );
+  }
+
   function patchCoreForRuntime(source) {
     let patched = source;
+
+    const rollCalcNeedle = `    values = applyFateReroll(values);
+
+    const sum = values.reduce((a, b) => a + b, 0);
+    const combo = bestCombo(values);
+    const effectiveComboMultiplier = comboMultiplier(combo);
+    const manualFactor = isManual ? upgradeFactor("manual_power") : 1;`;
+    if (!patched.includes(rollCalcNeedle)) throw new Error("Calcul du lancer introuvable");
+    patched = patched.replace(
+      rollCalcNeedle,
+      `    values = applyFateReroll(values);
+
+    const rawSum = values.reduce((a, b) => a + b, 0);
+    const sum = window.NightIdleEvents?.effectiveSum?.(values, rawSum) ?? rawSum;
+    const combo = bestCombo(values);
+    const eventComboFactor = combo ? (window.NightIdleEvents?.comboMultiplier?.() || 1) : 1;
+    const effectiveComboMultiplier = comboMultiplier(combo) * eventComboFactor;
+    const manualFactor = isManual ? upgradeFactor("manual_power") : 1;`
+    );
 
     const gainNeedle = "      manualFactor *\n      gemPowerFactor()\n    );";
     if (!patched.includes(gainNeedle)) throw new Error("Formule de gain introuvable");
     patched = patched.replace(
       gainNeedle,
-      `      manualFactor *\n      gemPowerFactor() *\n      (window.NightIdleFrenzy?.multiplier?.() || 1)\n    );`
+      `      manualFactor *\n      gemPowerFactor() *\n      (window.NightIdleFrenzy?.multiplier?.() || 1) *\n      (window.NightIdleEvents?.gainMultiplier?.() || 1)\n    );`
+    );
+
+    const resolvedNeedle = `    state.bestGain = Math.max(state.bestGain, gain);
+    save();`;
+    if (!patched.includes(resolvedNeedle)) throw new Error("Fin de lancer introuvable");
+    patched = patched.replace(
+      resolvedNeedle,
+      `    state.bestGain = Math.max(state.bestGain, gain);
+    window.NightIdleEvents?.onRollComplete?.(isManual, values, { gain, comboId: combo?.id || null });
+    save();`
     );
 
     const prestigeCostNeedle = `  function prestigeUpgradeCost(upgrade) {
@@ -202,9 +240,15 @@
     }
 
     try {
-      await loadScript("js/frenzy.js");
+      await loadPatchedScript("js/frenzy.js", patchFrenzyForEvents, "Rush Frénétique");
     } catch (error) {
       console.warn("[Night Idle] Frénésie manuelle indisponible, poursuite du boot.", error);
+    }
+
+    try {
+      await loadScript("js/events.js");
+    } catch (error) {
+      console.warn("[Night Idle] Anomalies de lancer indisponibles, poursuite du boot.", error);
     }
 
     try {
