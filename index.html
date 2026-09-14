@@ -100,7 +100,26 @@
         </div>
         <button id="closeUpgradesButton" class="modal-close" type="button" aria-label="Fermer">×</button>
       </div>
-      <div id="upgradesList" class="upgrades-list modal-scroll"></div>
+
+      <div class="upgrade-balance">
+        <span>Points disponibles</span>
+        <strong id="upgradesBalanceValue">0</strong>
+      </div>
+
+      <div class="modal-tabs" role="tablist" aria-label="Groupes d'améliorations">
+        <button id="generalUpgradesTab" class="modal-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="generalUpgradesPanel">GÉNÉRALES</button>
+        <button id="comboMasteriesTab" class="modal-tab" type="button" role="tab" aria-selected="false" aria-controls="comboMasteriesPanel">MAÎTRISES</button>
+      </div>
+
+      <div class="upgrade-tabs-body modal-scroll">
+        <section id="generalUpgradesPanel" class="upgrade-tab-panel" role="tabpanel" aria-labelledby="generalUpgradesTab">
+          <div id="generalUpgradesList" class="upgrade-stack"></div>
+        </section>
+
+        <section id="comboMasteriesPanel" class="upgrade-tab-panel" role="tabpanel" aria-labelledby="comboMasteriesTab" hidden>
+          <div id="comboUpgradesList" class="upgrade-stack"></div>
+        </section>
+      </div>
     </div>
   </dialog>
 
