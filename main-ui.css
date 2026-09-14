@@ -1,0 +1,98 @@
+.topbar {
+  min-height: 56px;
+  padding: 0;
+}
+
+.currencies-panel {
+  width: 100%;
+  min-width: 0;
+  height: 56px;
+  grid-template-columns: minmax(0, 1fr) 1px minmax(82px, 0.34fr);
+  padding: 8px 14px;
+  border-radius: 18px;
+}
+
+.currency-block {
+  text-align: left;
+}
+
+.gem-currency {
+  text-align: right;
+}
+
+.currency-block span {
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.currency-block strong {
+  margin-top: 2px;
+  font-size: clamp(1.08rem, 4.6vw, 1.35rem);
+}
+
+.roll-card {
+  grid-template-rows: 32px minmax(0, 1fr) 96px;
+  gap: clamp(8px, 1.4dvh, 12px);
+}
+
+.section-heading {
+  height: 32px;
+  min-height: 32px;
+  justify-content: flex-end;
+}
+
+.section-heading > div:first-child {
+  display: none;
+}
+
+.heading-actions {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+#rollButton[hidden] {
+  display: none !important;
+}
+
+.dice-tray {
+  cursor: pointer;
+  touch-action: manipulation;
+  border-radius: 18px;
+  transition: background 100ms ease, transform 100ms ease;
+}
+
+.dice-tray:focus-visible {
+  outline: 3px solid rgba(165, 156, 255, 0.42);
+  outline-offset: 3px;
+}
+
+.dice-tray:active {
+  transform: scale(0.992);
+  background: rgba(138, 125, 255, 0.035);
+}
+
+.die:not(.locked-die) {
+  cursor: pointer;
+}
+
+.dice-tray:active .die:not(.locked-die) {
+  transform: scale(0.97);
+}
+
+@media (max-height: 700px) {
+  .topbar,
+  .currencies-panel {
+    min-height: 48px;
+    height: 48px;
+  }
+
+  .roll-card {
+    grid-template-rows: 28px minmax(0, 1fr) 90px;
+  }
+
+  .section-heading {
+    height: 28px;
+    min-height: 28px;
+  }
+}
