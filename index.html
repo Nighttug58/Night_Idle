@@ -26,10 +26,13 @@
           <p class="eyebrow">LANCER ACTIF</p>
           <h2 id="rollTitle">Tes dés</h2>
         </div>
-        <div class="dice-count"><span id="diceCountValue">1</span>/6 dés</div>
+        <div class="heading-actions">
+          <button id="combosButton" class="icon-button" type="button" aria-haspopup="dialog">COMBOS</button>
+          <div class="dice-count"><span id="diceCountValue">1</span>/6 dés</div>
+        </div>
       </div>
 
-      <div id="diceTray" class="dice-tray" aria-label="Résultat des dés"></div>
+      <div id="diceTray" class="dice-tray" aria-label="Tes dés et prochain dé à débloquer"></div>
 
       <div class="result-panel">
         <div>
@@ -53,41 +56,6 @@
       <button id="rollButton" class="primary-button" type="button">LANCER</button>
     </section>
 
-    <section class="game-card unlock-card" aria-labelledby="unlockTitle">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">PROGRESSION</p>
-          <h2 id="unlockTitle">Débloquer un dé</h2>
-        </div>
-      </div>
-
-      <div id="nextDiePanel" class="next-die-panel">
-        <div>
-          <span class="muted">Prochain dé</span>
-          <strong id="nextDieLabel">Dé n°2</strong>
-        </div>
-        <div class="cost-block">
-          <span class="muted">Coût</span>
-          <strong id="nextDieCost">50</strong>
-        </div>
-        <button id="buyDieButton" class="secondary-button" type="button">ACHETER</button>
-      </div>
-
-      <div id="maxDicePanel" class="max-dice-panel" hidden>
-        Les 6 dés sont débloqués.
-      </div>
-    </section>
-
-    <section class="game-card" aria-labelledby="combosTitle">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">TABLE DES GAINS</p>
-          <h2 id="combosTitle">Combinaisons</h2>
-        </div>
-      </div>
-      <div id="combosList" class="combos-list"></div>
-    </section>
-
     <section class="stats-grid" aria-label="Statistiques">
       <article class="stat-card">
         <span>Lancers</span>
@@ -108,6 +76,19 @@
       <button id="resetButton" class="text-button" type="button">Réinitialiser la partie</button>
     </footer>
   </main>
+
+  <dialog id="combosModal" class="modal" aria-labelledby="combosTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">TABLE DES GAINS</p>
+          <h2 id="combosTitle">Combinaisons</h2>
+        </div>
+        <button id="closeCombosButton" class="modal-close" type="button" aria-label="Fermer">×</button>
+      </div>
+      <div id="combosList" class="combos-list"></div>
+    </div>
+  </dialog>
 
   <script src="js/config.js"></script>
   <script src="js/game.js"></script>
