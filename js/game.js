@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-economy1";
+  const BUILD = "20260914-frenzy1";
 
   // Chrome/Android ajoute par défaut un flash bleu sur les zones tactiles.
   // On le supprime sans toucher au focus-visible clavier défini dans styles.css.
@@ -24,6 +24,69 @@
       script.onerror = () => reject(new Error(`Impossible de charger ${src}`));
       document.head.appendChild(script);
     });
+  }
+
+  async function loadPatchedScript(src, transform, label) {
+    try {
+      const response = await fetch(`${src}?v=${BUILD}`, { cache: "no-store" });
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+      const source = await response.text();
+      const patched = transform(source);
+      if (!patched || patched === source) throw new Error("Patch non appliqué");
+
+      const script = document.createElement("script");
+      script.textContent = `${patched}\n//# sourceURL=${src}?v=${BUILD}`;
+      document.head.appendChild(script);
+      return;
+    } catch (error) {
+      console.warn(`[Night Idle] ${label} dynamique indisponible, fallback standard.`, error);
+      await loadScript(src);
+    }
+  }
+
+  function patchMusicForDynamicTempo(source) {
+    let patched = source;
+
+    const declarationsNeedle = "  let startedByGesture = false;";
+    if (!patched.includes(declarationsNeedle)) throw new Error("Déclarations musique introuvables");
+    patched = patched.replace(
+      declarationsNeedle,
+      `${declarationsNeedle}\n  let tempoMultiplier = 1;\n  let renderedTempoBand = 0;\n  let lastTempoRestartAt = 0;`
+    );
+
+    const beatNeedle = "    const beat = 60 / track.bpm;";
+    if (!patched.includes(beatNeedle)) throw new Error("Calcul BPM introuvable");
+    patched = patched.replace(
+      beatNeedle,
+      "    const beat = 60 / (track.bpm * tempoMultiplier);"
+    );
+
+    const apiNeedle = "  renderMusicButton();\n\n  window.NightIdleMusic = Object.freeze({";
+    if (!patched.includes(apiNeedle)) throw new Error("API musique introuvable");
+    patched = patched.replace(
+      apiNeedle,
+      `  function setTempoMultiplier(value) {\n    const next = Math.max(1, Math.min(1.32, Number(value) || 1));\n    const desiredBand = Math.max(0, Math.round((next - 1) / 0.055));\n    tempoMultiplier = next;\n\n    if (desiredBand === renderedTempoBand) return tempoMultiplier;\n\n    if (!preferences.enabled || !startedByGesture || document.hidden || currentTrackIndex < 0) {\n      renderedTempoBand = desiredBand;\n      return tempoMultiplier;\n    }\n\n    const now = performance.now();\n    if (now - lastTempoRestartAt < 650) return tempoMultiplier;\n\n    renderedTempoBand = desiredBand;\n    lastTempoRestartAt = now;\n    playTrack(currentTrackIndex);\n    return tempoMultiplier;\n  }\n\n  renderMusicButton();\n\n  window.NightIdleMusic = Object.freeze({`
+    );
+
+    const currentTrackNeedle = "    currentTrack: () => currentTrackIndex >= 0 ? TRACKS[currentTrackIndex]?.name || null : null,\n    next: () => {";
+    if (!patched.includes(currentTrackNeedle)) throw new Error("Extension API musique introuvable");
+    patched = patched.replace(
+      currentTrackNeedle,
+      `    currentTrack: () => currentTrackIndex >= 0 ? TRACKS[currentTrackIndex]?.name || null : null,\n    tempoMultiplier: () => tempoMultiplier,\n    setTempoMultiplier,\n    next: () => {`
+    );
+
+    patched = patched.replace("    version: 2,", "    version: 3,");
+    return patched;
+  }
+
+  function patchCoreForFrenzy(source) {
+    const needle = "      manualFactor *\n      gemPowerFactor()\n    );";
+    if (!source.includes(needle)) throw new Error("Formule de gain introuvable");
+
+    return source.replace(
+      needle,
+      `      manualFactor *\n      gemPowerFactor() *\n      (window.NightIdleFrenzy?.multiplier?.() || 1)\n    );`
+    );
   }
 
   async function boot() {
@@ -70,9 +133,15 @@
     }
 
     try {
-      await loadScript("js/music.js");
+      await loadPatchedScript("js/music.js", patchMusicForDynamicTempo, "Accélération musicale");
     } catch (error) {
       console.warn("[Night Idle] Musique procédurale indisponible, poursuite du boot.", error);
+    }
+
+    try {
+      await loadScript("js/frenzy.js");
+    } catch (error) {
+      console.warn("[Night Idle] Frénésie manuelle indisponible, poursuite du boot.", error);
     }
 
     try {
@@ -82,7 +151,7 @@
     }
 
     try {
-      await loadScript("js/game-core.js");
+      await loadPatchedScript("js/game-core.js", patchCoreForFrenzy, "Multiplicateur Frénésie");
     } catch (error) {
       console.error("[Night Idle] Échec du chargement du moteur principal.", error);
       const event = new ErrorEvent("error", { error, message: error.message });
