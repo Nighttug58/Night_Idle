@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-feel1";
+  const BUILD = "20260914-music1";
 
   function loadScript(src) {
     return new Promise((resolve, reject) => {
@@ -31,6 +31,12 @@
       await loadScript("js/feel.js");
     } catch (error) {
       console.warn("[Night Idle] Feedback visuel/sonore indisponible, poursuite du boot.", error);
+    }
+
+    try {
+      await loadScript("js/music.js");
+    } catch (error) {
+      console.warn("[Night Idle] Musique procédurale indisponible, poursuite du boot.", error);
     }
 
     try {
