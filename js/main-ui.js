@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-mainui1";
+  const BUILD = "20260914-mainui2";
   const stylesheet = document.createElement("link");
   stylesheet.rel = "stylesheet";
   stylesheet.href = `main-ui.css?v=${BUILD}`;
@@ -29,18 +29,27 @@
     });
   }
 
-  const suffixes = [
-    { value: 1e33, suffix: "Dc" },
-    { value: 1e30, suffix: "No" },
-    { value: 1e27, suffix: "Oc" },
-    { value: 1e24, suffix: "Sp" },
-    { value: 1e21, suffix: "Sx" },
-    { value: 1e18, suffix: "Qi" },
-    { value: 1e15, suffix: "Q" },
-    { value: 1e12, suffix: "T" },
-    { value: 1e9, suffix: "B" },
-    { value: 1e6, suffix: "M" }
-  ];
+  function alphabeticSuffix(index) {
+    let value = Math.max(0, Math.floor(index));
+    let result = "";
+
+    do {
+      result = String.fromCharCode(65 + (value % 26)) + result;
+      value = Math.floor(value / 26) - 1;
+    } while (value >= 0);
+
+    return result;
+  }
+
+  function suffixForGroup(group) {
+    if (group === 2) return "M";
+    if (group === 3) return "B";
+    if (group === 4) return "T";
+    if (group === 5) return "Q";
+    if (group === 6) return "QQ";
+    if (group >= 7) return alphabeticSuffix(group - 7);
+    return "";
+  }
 
   function parseDisplayedNumber(text) {
     if (typeof text !== "string") return NaN;
@@ -53,17 +62,23 @@
   }
 
   function compactNumber(value) {
-    const absolute = Math.abs(value);
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return null;
+
+    const absolute = Math.abs(numeric);
     if (absolute < 1e6) return null;
 
-    const unit = suffixes.find((entry) => absolute >= entry.value) || suffixes[suffixes.length - 1];
-    const scaled = value / unit.value;
+    const group = Math.floor(Math.log10(absolute) / 3);
+    const divisor = Math.pow(10, group * 3);
+    const suffix = suffixForGroup(group);
+    const scaled = numeric / divisor;
     const digits = Math.abs(scaled) < 10 ? 2 : Math.abs(scaled) < 100 ? 1 : 0;
     const formatted = new Intl.NumberFormat("fr-CH", {
       maximumFractionDigits: digits,
       minimumFractionDigits: 0
     }).format(scaled);
-    return `${formatted}${unit.suffix}`;
+
+    return `${formatted}${suffix}`;
   }
 
   const compactTargets = [
@@ -90,5 +105,5 @@
     compactNode(node);
   });
 
-  window.NightIdleMainUI = Object.freeze({ compactNumber });
+  window.NightIdleMainUI = Object.freeze({ compactNumber, alphabeticSuffix });
 })();
