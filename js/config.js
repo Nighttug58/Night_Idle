@@ -1,5 +1,5 @@
 window.NightIdleConfig = Object.freeze({
-  version: 10,
+  version: 11,
   maxDice: 6,
   dieFaces: 6,
 
@@ -80,9 +80,11 @@ window.NightIdleConfig = Object.freeze({
     Object.freeze({
       id: "gem_power",
       name: "Puissance des Gemmes",
-      description: "Chaque Gemme actuellement possédée augmente tous les gains. Chaque niveau ajoute +0,02 % par Gemme.",
-      maxLevel: 10,
+      description: "Chaque Gemme actuellement possédée augmente tous les gains. Chaque niveau ajoute +0,02 % par Gemme. Cette amélioration n'a pas de niveau maximum.",
+      unlimited: true,
+      maxLevel: Number.POSITIVE_INFINITY,
       costs: Object.freeze([3, 4, 5, 7, 10, 14, 19, 25, 32, 40]),
+      costGrowth: 1.18,
       bonusPerGemPerLevel: 0.0002
     }),
     Object.freeze({
