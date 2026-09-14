@@ -1,0 +1,124 @@
+.prestige-tabs {
+  margin-top: 0;
+}
+
+.prestige-tabs-body {
+  min-height: 0;
+  padding-right: 2px;
+}
+
+.prestige-tab-panel[hidden] {
+  display: none;
+}
+
+.prestige-shop-balance {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(143, 231, 255, 0.24);
+  border-radius: 13px;
+  background: rgba(20, 25, 34, 0.97);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+}
+
+.prestige-shop-balance span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.prestige-shop-balance strong {
+  color: var(--gem);
+  font-variant-numeric: tabular-nums;
+}
+
+.prestige-shop-list {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 2px;
+}
+
+.prestige-shop-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 116px;
+  gap: 10px;
+  align-items: stretch;
+  padding: 11px;
+  border: 1px solid rgba(143, 231, 255, 0.12);
+  border-radius: 15px;
+  background: var(--surface-2);
+}
+
+.prestige-shop-card.is-maxed {
+  border-color: rgba(124, 227, 178, 0.22);
+}
+
+.prestige-shop-info {
+  min-width: 0;
+}
+
+.prestige-shop-info p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.28;
+}
+
+.prestige-shop-buy {
+  display: flex;
+  min-width: 0;
+  padding: 9px 8px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #64cbe8, #7187ff);
+  color: #071118;
+  cursor: pointer;
+  font-size: 0.66rem;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  transition: transform 100ms ease;
+}
+
+.prestige-shop-buy strong {
+  margin-top: 3px;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.prestige-shop-buy:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.prestige-shop-buy:disabled {
+  background: var(--surface-3);
+  color: #788497;
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.prestige-shop-card.is-maxed .prestige-shop-buy:disabled {
+  color: var(--success);
+  opacity: 1;
+}
+
+@media (max-width: 520px) {
+  .prestige-shop-card {
+    grid-template-columns: minmax(0, 1fr) 96px;
+    gap: 8px;
+    padding: 9px;
+  }
+
+  .prestige-shop-buy {
+    padding-inline: 6px;
+    font-size: 0.6rem;
+  }
+}
