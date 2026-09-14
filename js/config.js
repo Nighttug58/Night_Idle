@@ -1,5 +1,5 @@
 window.NightIdleConfig = Object.freeze({
-  version: 7,
+  version: 8,
   maxDice: 6,
   dieFaces: 6,
 
@@ -100,6 +100,15 @@ window.NightIdleConfig = Object.freeze({
       maxLevel: 2,
       costs: Object.freeze([25, 75]),
       startingDiceByLevel: Object.freeze([1, 2, 3])
+    }),
+    Object.freeze({
+      id: "cost_curve_mastery",
+      name: "Économie d'échelle",
+      description: "Réduit définitivement la croissance exponentielle du prix de toutes les améliorations achetées avec des Points. Les dés et déblocages de combos ne sont pas concernés.",
+      maxLevel: 50,
+      costs: Object.freeze(Array.from({ length: 50 }, (_, level) => Math.ceil(2 * Math.pow(1.08, level) + level * 0.2))),
+      growthReductionPerLevel: 0.005,
+      maxGrowthReduction: 0.25
     })
   ]),
 
