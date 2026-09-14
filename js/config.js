@@ -1,5 +1,5 @@
 window.NightIdleConfig = Object.freeze({
-  version: 9,
+  version: 10,
   maxDice: 6,
   dieFaces: 6,
 
@@ -113,11 +113,21 @@ window.NightIdleConfig = Object.freeze({
       id: "frenzy_mastery",
       name: "Maîtrise de la Frénésie",
       description: "Renforce définitivement la Frénésie manuelle : la jauge se remplit plus vite et son multiplicateur maximum augmente à chaque niveau.",
-      maxLevel: 15,
-      costs: Object.freeze([3, 5, 6, 8, 10, 12, 14, 17, 20, 24, 28, 34, 40, 48, 57]),
+      maxLevel: 20,
+      costs: Object.freeze([3, 5, 6, 8, 10, 12, 14, 17, 20, 24, 28, 34, 40, 48, 57, 68, 81, 96, 113, 133]),
       baseMaxMultiplier: 10,
       maxMultiplierPerLevel: 1,
       chargeSpeedPerLevel: 0.06
+    }),
+    Object.freeze({
+      id: "frenzy_tier_power",
+      name: "Puissance des paliers",
+      description: "Augmente définitivement le multiplicateur gagné à chaque barre de Frénésie. Chaque niveau ajoute +0,1× par palier, jusqu'à +2,0× par barre.",
+      maxLevel: 15,
+      costs: Object.freeze([4, 6, 8, 11, 14, 18, 23, 29, 36, 44, 53, 63, 74, 86, 100]),
+      baseStep: 0.5,
+      stepPerLevel: 0.1,
+      maxBonusStep: 1.5
     })
   ]),
 
