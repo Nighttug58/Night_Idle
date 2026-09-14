@@ -42,15 +42,17 @@
     return Math.max(0, Math.min(1, clampLevel(level) / mastery.maxLevel));
   }
 
-  function effectiveGrowth(baseGrowth, levelOrProgress = currentLevel) {
+  function effectiveGrowthAtProgress(baseGrowth, progress) {
     const base = Math.max(targetGrowth, Number(baseGrowth) || targetGrowth);
-    const progress = Number(levelOrProgress) <= 1 && !Number.isInteger(levelOrProgress)
-      ? Math.max(0, Math.min(1, Number(levelOrProgress) || 0))
-      : progressForLevel(levelOrProgress);
+    const normalized = Math.max(0, Math.min(1, Number(progress) || 0));
 
     // Interpolation directe : au niveau 50, chaque courbe vaut exactement ×1.10,
     // indépendamment de sa valeur d'origine (1.60, 1.65, 1.80, 1.85 ou 2.05).
-    return base + (targetGrowth - base) * progress;
+    return base + (targetGrowth - base) * normalized;
+  }
+
+  function effectiveGrowthAtLevel(baseGrowth, level) {
+    return effectiveGrowthAtProgress(baseGrowth, progressForLevel(level));
   }
 
   function applyLevel(level) {
@@ -59,10 +61,10 @@
 
     runtimeUpgrades.forEach((upgrade) => {
       const baseGrowth = baseGeneralGrowth.get(upgrade.id) || targetGrowth;
-      upgrade.costGrowth = effectiveGrowth(baseGrowth, currentProgress);
+      upgrade.costGrowth = effectiveGrowthAtProgress(baseGrowth, currentProgress);
     });
 
-    runtimeComboUpgrade.costGrowth = effectiveGrowth(baseComboGrowth, currentProgress);
+    runtimeComboUpgrade.costGrowth = effectiveGrowthAtProgress(baseComboGrowth, currentProgress);
   }
 
   function readSavedLevel() {
@@ -109,10 +111,11 @@
   });
 
   function growthRangeAt(level) {
+    const clamped = clampLevel(level);
     const values = [
       ...baseGeneralGrowth.values(),
       baseComboGrowth
-    ].map((base) => effectiveGrowth(base, clampLevel(level)));
+    ].map((base) => effectiveGrowthAtLevel(base, clamped));
 
     return {
       min: Math.min(...values),
@@ -176,11 +179,11 @@
   installShopObserver();
 
   window.NightIdleEconomy = Object.freeze({
-    version: 2,
+    version: 3,
     level: () => currentLevel,
     progress: () => currentProgress,
     targetGrowth: () => targetGrowth,
-    effectiveGrowth: (baseGrowth) => effectiveGrowth(Number(baseGrowth) || targetGrowth, currentLevel),
+    effectiveGrowth: (baseGrowth) => effectiveGrowthAtLevel(Number(baseGrowth) || targetGrowth, currentLevel),
     growthRange: () => growthRangeAt(currentLevel)
   });
 })();
