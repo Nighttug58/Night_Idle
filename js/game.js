@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-frenzy1";
+  const BUILD = "20260914-frenzy2";
 
   // Chrome/Android ajoute par défaut un flash bleu sur les zones tactiles.
   // On le supprime sans toucher au focus-visible clavier défini dans styles.css.
@@ -92,7 +92,7 @@
   async function boot() {
     // L'index peut encore avoir une ancienne config en cache. Recharge uniquement si nécessaire,
     // avec le BUILD courant, avant que les modules runtime ne capturent NightIdleConfig.
-    if ((Number(window.NightIdleConfig?.version) || 0) < 8) {
+    if ((Number(window.NightIdleConfig?.version) || 0) < 9) {
       try {
         await loadScript("js/config.js");
       } catch (error) {
