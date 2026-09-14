@@ -82,9 +82,6 @@
     const currentPrestige = integer(save?.prestigeCount);
     const trackedPrestige = integer(stats.trackedPrestigeCount);
 
-    // offline.js s'exécute avant ce module. S'il a ajouté une période hors ligne,
-    // les compteurs du run ont avancé alors que les marqueurs globaux sont restés
-    // sur la sauvegarde de départ. On récupère donc exactement ce delta ici.
     if (trackedPrestige === currentPrestige) {
       const rollDelta = Math.max(0, integer(save?.totalRolls) - integer(stats.trackedRunRolls));
       const pointDelta = Math.max(0, runPoints(save) - number(stats.trackedRunPoints));
@@ -169,8 +166,6 @@
           if (comboId) stats.comboCounts[comboId] = number(stats.comboCounts[comboId]) + 1;
           else stats.noComboRolls += 1;
         } else {
-          // Un delta groupé hors du boot n'est normalement pas attendu. On le garde
-          // séparé plutôt que d'inventer une origine.
           stats.unclassifiedRolls += rollDelta;
         }
       }
@@ -206,6 +201,8 @@
 
   persistStatsIntoCurrentSave();
 
+  let statsModal = null;
+
   if (storageProto && inheritedSetItem) {
     storageProto.setItem = function nightIdleStatsSetItem(key, value) {
       if (this === localStorage && key === SAVE_KEY) {
@@ -226,17 +223,19 @@
     };
   }
 
-  const rollButton = document.getElementById("rollButton");
-  rollButton?.addEventListener("click", () => {
+  document.getElementById("rollButton")?.addEventListener("click", () => {
     manualIntent = true;
   }, { capture: true });
 
-  const resetButton = document.getElementById("resetButton");
-  resetButton?.addEventListener("click", () => {
+  document.getElementById("resetButton")?.addEventListener("click", () => {
     resetIntent = true;
+    // Le confirm() de game-core est synchrone : si le reset est validé, sa
+    // sauvegarde arrive avant ce timeout. S'il est annulé, on retire l'intention.
+    window.setTimeout(() => {
+      resetIntent = false;
+    }, 0);
   }, { capture: true });
 
-  // --- UI statistiques ----------------------------------------------------
   const stylesheet = document.createElement("link");
   stylesheet.rel = "stylesheet";
   stylesheet.href = `stats.css?v=${BUILD}`;
@@ -245,7 +244,6 @@
   const footerButtons = document.querySelector(".footer-buttons");
   const prestigeButton = document.getElementById("prestigeButton");
   let statsButton = null;
-  let statsModal = null;
 
   if (footerButtons && !document.getElementById("statsButton")) {
     statsButton = document.createElement("button");
