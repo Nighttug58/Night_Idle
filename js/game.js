@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-offline-claim1";
+  const BUILD = "20260914-mainui1";
 
   function loadScript(src) {
     return new Promise((resolve, reject) => {
@@ -27,6 +27,12 @@
       await loadScript("js/stability.js");
     } catch (error) {
       console.warn("[Night Idle] Guard de stabilité indisponible, poursuite du boot.", error);
+    }
+
+    try {
+      await loadScript("js/main-ui.js");
+    } catch (error) {
+      console.warn("[Night Idle] Interface minimale indisponible, poursuite du boot.", error);
     }
 
     try {
