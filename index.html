@@ -7,6 +7,7 @@
   <title>Night Idle</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="prestige.css">
+  <link rel="stylesheet" href="offline.css">
 </head>
 <body>
   <main class="app-shell">
@@ -203,7 +204,39 @@
     </div>
   </dialog>
 
+  <dialog id="offlineModal" class="modal offline-modal" aria-labelledby="offlineTitle">
+    <div class="modal-card offline-modal-card">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">BON RETOUR</p>
+          <h2 id="offlineTitle">Revenu hors ligne</h2>
+        </div>
+        <button id="closeOfflineButton" class="modal-close" type="button" aria-label="Fermer">×</button>
+      </div>
+
+      <div class="offline-content">
+        <div class="offline-highlight">
+          <span>Points gagnés pendant ton absence</span>
+          <strong id="offlineGainValue">+0</strong>
+        </div>
+
+        <div class="offline-grid">
+          <div><span>Temps absent</span><strong id="offlineAwayValue">0 min</strong></div>
+          <div><span>Temps compté</span><strong id="offlineCountedValue">0 min</strong></div>
+          <div><span>Réserve max</span><strong id="offlineReserveValue">10 min</strong></div>
+          <div><span>Efficacité</span><strong id="offlineEfficiencyValue">0 %</strong></div>
+          <div><span>Auto-lancers</span><strong id="offlineRollsValue">0</strong></div>
+          <div><span>Gain moyen / lancer</span><strong id="offlineAverageValue">0</strong></div>
+        </div>
+
+        <p class="offline-note">Le rendement utilise ton build sauvegardé, les probabilités réelles des combos et Chance du Destin. Aucun achat automatique n'est effectué pendant l'absence.</p>
+        <button id="claimOfflineButton" class="primary-button" type="button">CONTINUER</button>
+      </div>
+    </div>
+  </dialog>
+
   <script src="js/config.js"></script>
+  <script src="js/offline.js"></script>
   <script src="js/game.js"></script>
 </body>
 </html>
