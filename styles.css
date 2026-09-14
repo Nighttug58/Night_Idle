@@ -54,7 +54,9 @@ button:focus-visible { outline: 3px solid rgba(165, 156, 255, 0.55); outline-off
 .footer-actions,
 .modal-header,
 .upgrade-title-row,
-.upgrade-balance {
+.upgrade-balance,
+.combo-title-line,
+.combo-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -285,7 +287,9 @@ h2 {
 .primary-button:active,
 .icon-button:active,
 .locked-die.is-affordable:active,
-.upgrade-buy:not(:disabled):active { transform: scale(0.98); }
+.upgrade-buy:not(:disabled):active,
+.combo-unlock-buy:not(:disabled):active,
+.modal-tab:active { transform: scale(0.98); }
 
 .stats-grid {
   display: grid;
@@ -365,44 +369,93 @@ h2 {
 
 .combo-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) 116px;
   gap: 10px;
-  align-items: center;
-  padding: 10px 12px;
-  border-radius: 13px;
+  align-items: stretch;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
   background: var(--surface-2);
 }
 
-.combo-row.is-locked { opacity: 0.36; }
-.combo-row .combo-name { overflow: hidden; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
-.combo-row .combo-example { color: var(--muted); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
-.combo-row .combo-multiplier { min-width: 54px; color: var(--accent-strong); text-align: right; font-weight: 850; }
+.combo-row.is-locked { opacity: 0.78; }
+.combo-row.is-unlocked { border-color: rgba(124, 227, 178, 0.2); }
+.combo-details { min-width: 0; }
+.combo-title-line { gap: 8px; }
+.combo-name { min-width: 0; overflow: hidden; font-size: 0.88rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.combo-example { flex: 0 0 auto; color: var(--muted); font-size: 0.69rem; font-variant-numeric: tabular-nums; }
+.combo-meta { margin-top: 8px; justify-content: flex-start; gap: 8px; flex-wrap: wrap; color: var(--muted); font-size: 0.65rem; }
+.combo-meta span { white-space: nowrap; }
+.combo-multiplier { color: var(--accent-strong); font-size: 0.76rem; font-weight: 900; }
+.combo-row.is-unlocked .combo-meta span:nth-child(2) { color: var(--success); font-weight: 800; }
 
-.upgrades-list { display: flex; flex-direction: column; gap: 10px; padding-right: 2px; }
+.combo-unlock-buy,
+.upgrade-buy {
+  display: flex;
+  min-width: 0;
+  padding: 9px 8px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), #6658ff);
+  color: white;
+  cursor: pointer;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.combo-unlock-buy strong,
+.upgrade-buy strong { margin-top: 3px; font-size: 0.72rem; font-variant-numeric: tabular-nums; letter-spacing: 0; }
+
+.combo-unlock-buy:disabled,
+.upgrade-buy:disabled { background: var(--surface-3); color: #788497; cursor: not-allowed; opacity: 0.75; }
+.combo-row.is-unlocked .combo-unlock-buy:disabled { color: var(--success); opacity: 1; }
 
 .upgrade-balance {
-  position: sticky;
-  top: 0;
-  z-index: 2;
+  flex: 0 0 auto;
   padding: 10px 12px;
   border: 1px solid rgba(138, 125, 255, 0.22);
   border-radius: 13px;
   background: rgba(20, 25, 34, 0.96);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
 }
 
 .upgrade-balance span { color: var(--muted); font-size: 0.72rem; }
 .upgrade-balance strong { color: var(--success); font-variant-numeric: tabular-nums; }
 
-.upgrade-section-title {
-  margin-top: 4px;
-  color: var(--accent-strong);
-  font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+.modal-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  flex: 0 0 auto;
+  margin: 10px 0;
+  padding: 4px;
+  border-radius: 14px;
+  background: #0f141d;
 }
 
+.modal-tab {
+  min-height: 38px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+
+.modal-tab.is-active {
+  background: var(--surface-3);
+  color: var(--accent-strong);
+  box-shadow: inset 0 0 0 1px rgba(165, 156, 255, 0.16);
+}
+
+.upgrade-tabs-body { min-height: 0; padding-right: 2px; }
+.upgrade-tab-panel[hidden] { display: none; }
 .upgrade-stack { display: grid; gap: 8px; }
 
 .upgrade-card {
@@ -425,26 +478,6 @@ h2 {
 .upgrade-effect { margin-top: 7px; color: #d5d9e2; font-size: 0.72rem; }
 .upgrade-effect strong { color: var(--success); }
 
-.upgrade-buy {
-  display: flex;
-  min-width: 0;
-  padding: 9px 8px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--accent), #6658ff);
-  color: white;
-  cursor: pointer;
-  font-size: 0.66rem;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-}
-
-.upgrade-buy strong { margin-top: 3px; font-size: 0.72rem; font-variant-numeric: tabular-nums; letter-spacing: 0; }
-.upgrade-buy:disabled { background: var(--surface-3); color: #788497; cursor: not-allowed; opacity: 0.75; }
-
 @media (max-width: 520px) {
   :root { --dice-zone-height: clamp(146px, 23dvh, 176px); }
   .app-shell { padding-inline: 12px; }
@@ -455,9 +488,11 @@ h2 {
   .icon-button { padding: 5px 6px; font-size: 0.57rem; }
   .die { border-radius: 18px; }
   .modal-card { padding: 15px; }
-  .combo-row { gap: 7px; padding-inline: 10px; }
+  .combo-row,
   .upgrade-card { grid-template-columns: minmax(0, 1fr) 96px; gap: 8px; padding: 9px; }
+  .combo-unlock-buy,
   .upgrade-buy { padding-inline: 6px; font-size: 0.6rem; }
+  .combo-meta { gap: 6px; font-size: 0.6rem; }
 }
 
 @media (max-height: 690px) {
