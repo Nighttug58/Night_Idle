@@ -1,10 +1,8 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-achievements2";
+  const BUILD = "20260914-mutations1";
 
-  // Supprime totalement le flash/tap highlight natif Android/Chrome sur l'interface.
-  // Le focus clavier reste géré séparément avec :focus-visible dans les CSS du jeu.
   const tapStyle = document.createElement("style");
   tapStyle.textContent = `
     html,
@@ -81,10 +79,7 @@
 
     const beatNeedle = "    const beat = 60 / track.bpm;";
     if (!patched.includes(beatNeedle)) throw new Error("Calcul BPM introuvable");
-    patched = patched.replace(
-      beatNeedle,
-      "    const beat = 60 / (track.bpm * tempoMultiplier);"
-    );
+    patched = patched.replace(beatNeedle, "    const beat = 60 / (track.bpm * tempoMultiplier);");
 
     const apiNeedle = "  renderMusicButton();\n\n  window.NightIdleMusic = Object.freeze({";
     if (!patched.includes(apiNeedle)) throw new Error("API musique introuvable");
@@ -116,6 +111,16 @@
   function patchCoreForRuntime(source) {
     let patched = source;
 
+    const rollStartNeedle = `  function roll(isManual = true) {
+    let values = Array.from(`;
+    if (!patched.includes(rollStartNeedle)) throw new Error("Début du lancer introuvable");
+    patched = patched.replace(
+      rollStartNeedle,
+      `  function roll(isManual = true) {
+    window.NightIdleMutations?.beforeRoll?.({ isManual, diceCount: state.diceCount });
+    let values = Array.from(`
+    );
+
     const rollCalcNeedle = `    values = applyFateReroll(values);
 
     const sum = values.reduce((a, b) => a + b, 0);
@@ -126,12 +131,15 @@
     patched = patched.replace(
       rollCalcNeedle,
       `    values = applyFateReroll(values);
+    values = window.NightIdleMutations?.applyValues?.(values, { score: rollScore }) || values;
 
     const rawSum = values.reduce((a, b) => a + b, 0);
-    const sum = window.NightIdleEvents?.effectiveSum?.(values, rawSum) ?? rawSum;
+    const mutationSum = window.NightIdleMutations?.effectiveSum?.(values, rawSum) ?? rawSum;
+    const sum = window.NightIdleEvents?.effectiveSum?.(values, mutationSum) ?? mutationSum;
     const combo = bestCombo(values);
     const eventComboFactor = combo ? (window.NightIdleEvents?.comboMultiplier?.() || 1) : 1;
-    const effectiveComboMultiplier = comboMultiplier(combo) * eventComboFactor;
+    const mutationComboFactor = window.NightIdleMutations?.comboMultiplier?.(Boolean(combo)) || 1;
+    const effectiveComboMultiplier = comboMultiplier(combo) * eventComboFactor * mutationComboFactor;
     const manualFactor = isManual ? upgradeFactor("manual_power") : 1;`
     );
 
@@ -139,7 +147,7 @@
     if (!patched.includes(gainNeedle)) throw new Error("Formule de gain introuvable");
     patched = patched.replace(
       gainNeedle,
-      `      manualFactor *\n      gemPowerFactor() *\n      (window.NightIdleFrenzy?.multiplier?.() || 1) *\n      (window.NightIdleEvents?.gainMultiplier?.() || 1) *\n      (window.NightIdleAchievements?.gainMultiplier?.() || 1)\n    );`
+      `      manualFactor *\n      gemPowerFactor() *\n      (window.NightIdleFrenzy?.multiplier?.() || 1) *\n      (window.NightIdleEvents?.gainMultiplier?.() || 1) *\n      (window.NightIdleMutations?.gainMultiplier?.() ?? 1) *\n      (window.NightIdleAchievements?.gainMultiplier?.() || 1)\n    );`
     );
 
     const resolvedNeedle = `    state.bestGain = Math.max(state.bestGain, gain);
@@ -149,6 +157,7 @@
       resolvedNeedle,
       `    state.bestGain = Math.max(state.bestGain, gain);
     window.NightIdleEvents?.onRollComplete?.(isManual, values, { gain, comboId: combo?.id || null });
+    window.NightIdleMutations?.onRollComplete?.(isManual, values, { gain, comboId: combo?.id || null });
     save();`
     );
 
@@ -193,7 +202,7 @@
   }
 
   async function boot() {
-    if ((Number(window.NightIdleConfig?.version) || 0) < 14) {
+    if ((Number(window.NightIdleConfig?.version) || 0) < 15) {
       try {
         await loadScript("js/config.js");
       } catch (error) {
@@ -212,53 +221,32 @@
       console.warn("[Night Idle] Validation offline interrompue, poursuite du boot.", error);
     }
 
-    try {
-      await loadScript("js/stability.js");
-    } catch (error) {
-      console.warn("[Night Idle] Guard de stabilité indisponible, poursuite du boot.", error);
-    }
+    try { await loadScript("js/stability.js"); }
+    catch (error) { console.warn("[Night Idle] Guard de stabilité indisponible, poursuite du boot.", error); }
 
-    try {
-      await loadScript("js/main-ui.js");
-    } catch (error) {
-      console.warn("[Night Idle] Interface minimale indisponible, poursuite du boot.", error);
-    }
+    try { await loadScript("js/main-ui.js"); }
+    catch (error) { console.warn("[Night Idle] Interface minimale indisponible, poursuite du boot.", error); }
 
-    try {
-      await loadScript("js/stats.js");
-    } catch (error) {
-      console.warn("[Night Idle] Statistiques indisponibles, poursuite du boot.", error);
-    }
+    try { await loadScript("js/stats.js"); }
+    catch (error) { console.warn("[Night Idle] Statistiques indisponibles, poursuite du boot.", error); }
 
-    try {
-      await loadScript("js/feel.js");
-    } catch (error) {
-      console.warn("[Night Idle] Feedback visuel/sonore indisponible, poursuite du boot.", error);
-    }
+    try { await loadScript("js/feel.js"); }
+    catch (error) { console.warn("[Night Idle] Feedback visuel/sonore indisponible, poursuite du boot.", error); }
 
-    try {
-      await loadPatchedScript("js/music.js", patchMusicForDynamicTempo, "Accélération musicale");
-    } catch (error) {
-      console.warn("[Night Idle] Musique procédurale indisponible, poursuite du boot.", error);
-    }
+    try { await loadPatchedScript("js/music.js", patchMusicForDynamicTempo, "Accélération musicale"); }
+    catch (error) { console.warn("[Night Idle] Musique procédurale indisponible, poursuite du boot.", error); }
 
-    try {
-      await loadPatchedScript("js/frenzy.js", patchFrenzyForEvents, "Rush Frénétique");
-    } catch (error) {
-      console.warn("[Night Idle] Frénésie manuelle indisponible, poursuite du boot.", error);
-    }
+    try { await loadPatchedScript("js/frenzy.js", patchFrenzyForEvents, "Rush Frénétique"); }
+    catch (error) { console.warn("[Night Idle] Frénésie manuelle indisponible, poursuite du boot.", error); }
 
-    try {
-      await loadScript("js/events.js");
-    } catch (error) {
-      console.warn("[Night Idle] Anomalies de lancer indisponibles, poursuite du boot.", error);
-    }
+    try { await loadScript("js/events.js"); }
+    catch (error) { console.warn("[Night Idle] Anomalies de lancer indisponibles, poursuite du boot.", error); }
 
-    try {
-      await loadScript("js/economy.js");
-    } catch (error) {
-      console.warn("[Night Idle] Maîtrise permanente des coûts indisponible, poursuite du boot.", error);
-    }
+    try { await loadScript("js/mutations.js"); }
+    catch (error) { console.warn("[Night Idle] Dés Mutants indisponibles, poursuite du boot.", error); }
+
+    try { await loadScript("js/economy.js"); }
+    catch (error) { console.warn("[Night Idle] Maîtrise permanente des coûts indisponible, poursuite du boot.", error); }
 
     try {
       await loadScript("js/achievement-data-v2.js");
