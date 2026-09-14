@@ -1,14 +1,18 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-frenzy2";
+  const BUILD = "20260914-frenzy3";
   const SAVE_KEY = "nightIdle.save.v1";
   const PRESTIGE_SKILL_ID = "frenzy_mastery";
   const ACTIVE_CPS = 3;
   const BASE_MAX_MULTIPLIER = 10;
+  const BAR_MULTIPLIER_STEP = 0.5;
+  const BAR_FILL_SLOWDOWN = 10;
   const CPS_WINDOW_MS = 1000;
   const SOFT_DECAY_DELAY_MS = 460;
   const HARD_DECAY_DELAY_MS = 900;
+  const SOFT_DECAY_BARS_PER_SECOND = 0.02;
+  const HARD_DECAY_BARS_PER_SECOND = 0.05;
   const MAX_TEMPO_MULTIPLIER = 1.32;
 
   const config = window.NightIdleConfig;
@@ -27,7 +31,7 @@
   document.head.appendChild(stylesheet);
 
   let clickTimes = [];
-  let charge = 0;
+  let barProgress = 0;
   let cps = 0;
   let tempoMultiplier = 1;
   let lastManualClickAt = 0;
@@ -56,9 +60,17 @@
     return base + prestigeLevel * perLevel;
   }
 
+  function maxBars() {
+    return Math.max(0, Math.round((maxMultiplier() - 1) / BAR_MULTIPLIER_STEP));
+  }
+
   function chargeSpeedMultiplier() {
     const perLevel = Number(prestigeSkill?.chargeSpeedPerLevel) || 0;
     return 1 + prestigeLevel * perLevel;
+  }
+
+  function clampBarProgress(value) {
+    return Math.max(0, Math.min(maxBars(), Number(value) || 0));
   }
 
   prestigeLevel = readPrestigeLevel();
@@ -71,7 +83,7 @@
     <div class="frenzy-meta">
       <span class="frenzy-label">FRÉNÉSIE</span>
       <strong id="frenzyMultiplierValue">×1</strong>
-      <span id="frenzyCpsValue" class="frenzy-cps">0 CPS</span>
+      <span id="frenzyCpsValue" class="frenzy-cps">Barre 1 · 0 CPS</span>
     </div>
     <div class="frenzy-track" aria-hidden="true">
       <div id="frenzyFill" class="frenzy-fill"></div>
@@ -90,9 +102,20 @@
     return Math.max(0, Math.min(1, Number(value) || 0));
   }
 
+  function completedBars() {
+    return Math.min(maxBars(), Math.floor(barProgress + 1e-9));
+  }
+
+  function currentBarCharge() {
+    if (barProgress >= maxBars()) return 1;
+    return clamp01(barProgress - Math.floor(barProgress));
+  }
+
   function currentMultiplier() {
-    if (charge <= 0.001) return 1;
-    return 1 + (maxMultiplier() - 1) * Math.pow(clamp01(charge), 1.08);
+    return Math.min(
+      maxMultiplier(),
+      1 + completedBars() * BAR_MULTIPLIER_STEP
+    );
   }
 
   function trimClicks(now) {
@@ -111,10 +134,12 @@
     return true;
   }
 
-  function chargeGainForCps(value) {
-    if (value < ACTIVE_CPS) return 0;
-    const baseGain = Math.min(0.064, 0.018 + (value - ACTIVE_CPS) * 0.009);
-    return baseGain * chargeSpeedMultiplier();
+  function barGainForCps(value) {
+    if (value < ACTIVE_CPS || barProgress >= maxBars()) return 0;
+
+    // Ancien remplissage / 10 : une barre complète prend environ dix fois plus longtemps.
+    const oldGain = Math.min(0.064, 0.018 + (value - ACTIVE_CPS) * 0.009);
+    return (oldGain / BAR_FILL_SLOWDOWN) * chargeSpeedMultiplier();
   }
 
   function recordManualClick(now = performance.now()) {
@@ -122,8 +147,8 @@
     lastManualClickAt = now;
     trimClicks(now);
 
-    const gain = chargeGainForCps(cps);
-    if (gain > 0) charge = clamp01(charge + gain);
+    const gain = barGainForCps(cps);
+    if (gain > 0) barProgress = clampBarProgress(barProgress + gain);
 
     updateTempo(true);
     render(true);
@@ -131,7 +156,7 @@
 
   function resetFrenzy() {
     clickTimes = [];
-    charge = 0;
+    barProgress = 0;
     cps = 0;
     lastManualClickAt = 0;
     tempoMultiplier = 1;
@@ -140,9 +165,11 @@
   }
 
   function desiredTempoMultiplier() {
+    // La musique dépend surtout du rythme manuel. La progression globale n'ajoute qu'un léger bonus.
     const cpsBoost = Math.max(0, Math.min(0.24, (cps - 1) * 0.034));
-    const chargeBoost = charge * 0.08;
-    return Math.max(1, Math.min(MAX_TEMPO_MULTIPLIER, 1 + cpsBoost + chargeBoost));
+    const progressionRatio = maxBars() > 0 ? barProgress / maxBars() : 0;
+    const frenzyBoost = clamp01(progressionRatio) * 0.08;
+    return Math.max(1, Math.min(MAX_TEMPO_MULTIPLIER, 1 + cpsBoost + frenzyBoost));
   }
 
   function updateTempo(immediate = false) {
@@ -160,20 +187,27 @@
 
     const multiplier = currentMultiplier();
     const cap = maxMultiplier();
-    const active = cps >= ACTIVE_CPS || charge > 0.025;
+    const bars = maxBars();
+    const done = completedBars();
+    const maxed = done >= bars && bars > 0;
+    const active = cps >= ACTIVE_CPS || barProgress > 0.001;
     const hot = multiplier >= 1 + (cap - 1) * 0.45;
-    const maxed = multiplier >= cap - 0.05;
+    const shownBar = maxed ? bars : Math.min(bars, done + 1);
 
     meter.classList.toggle("is-active", active);
     meter.classList.toggle("is-hot", hot);
     meter.classList.toggle("is-maxed", maxed);
-    meter.title = `Frénésie : maximum ×${cap} · remplissage ×${chargeSpeedMultiplier().toFixed(2)}`;
+    meter.title = `Frénésie : +0,5× par barre · ${bars} barres jusqu'à ×${cap} · remplissage Prestige ×${chargeSpeedMultiplier().toFixed(2)}`;
 
-    if (fill) fill.style.transform = `scaleX(${clamp01(charge)})`;
+    if (fill) fill.style.transform = `scaleX(${currentBarCharge()})`;
     if (multiplierNode) {
-      multiplierNode.textContent = multiplier <= 1.005 ? "×1" : `×${multiplier.toFixed(maxed ? 0 : 2)}`;
+      multiplierNode.textContent = `×${Number.isInteger(multiplier) ? multiplier.toFixed(0) : multiplier.toFixed(1)}`;
     }
-    if (cpsNode) cpsNode.textContent = `${cps} CPS`;
+    if (cpsNode) {
+      cpsNode.textContent = maxed
+        ? `MAX · ${cps} CPS`
+        : `Barre ${shownBar}/${bars} · ${cps} CPS`;
+    }
   }
 
   function tick(now) {
@@ -182,11 +216,11 @@
     trimClicks(now);
 
     const idleMs = lastManualClickAt > 0 ? now - lastManualClickAt : Infinity;
-    if (charge > 0) {
+    if (barProgress > 0) {
       let decay = 0;
-      if (cps < ACTIVE_CPS || idleMs > SOFT_DECAY_DELAY_MS) decay = 0.15;
-      if (idleMs > HARD_DECAY_DELAY_MS) decay = 0.30;
-      if (decay > 0) charge = clamp01(charge - decay * dt);
+      if (cps < ACTIVE_CPS || idleMs > SOFT_DECAY_DELAY_MS) decay = SOFT_DECAY_BARS_PER_SECOND;
+      if (idleMs > HARD_DECAY_DELAY_MS) decay = HARD_DECAY_BARS_PER_SECOND;
+      if (decay > 0) barProgress = clampBarProgress(barProgress - decay * dt);
     }
 
     updateTempo(false);
@@ -198,6 +232,7 @@
     const next = clampPrestigeLevel(level);
     if (next === prestigeLevel) return;
     prestigeLevel = next;
+    barProgress = clampBarProgress(barProgress);
     render(true);
   }
 
@@ -233,7 +268,8 @@
     const perSpeed = Number(prestigeSkill?.chargeSpeedPerLevel) || 0;
     const cap = base + clamped * perMax;
     const speedPercent = clamped * perSpeed * 100;
-    return `Remplissage +${Math.round(speedPercent)} % · Max ×${cap}`;
+    const bars = Math.round((cap - 1) / BAR_MULTIPLIER_STEP);
+    return `+0,5× / barre · ${bars} barres · Remplissage +${Math.round(speedPercent)} % · Max ×${cap}`;
   }
 
   function patchPrestigeCard() {
@@ -307,13 +343,17 @@
   requestAnimationFrame(tick);
 
   window.NightIdleFrenzy = Object.freeze({
-    version: 2,
+    version: 3,
     multiplier: () => currentMultiplier(),
     maxMultiplier: () => maxMultiplier(),
+    maxBars: () => maxBars(),
+    completedBars: () => completedBars(),
+    currentBarCharge: () => currentBarCharge(),
     prestigeLevel: () => prestigeLevel,
     chargeSpeedMultiplier: () => chargeSpeedMultiplier(),
     cps: () => cps,
-    charge: () => charge,
+    charge: () => currentBarCharge(),
+    barProgress: () => barProgress,
     tempoMultiplier: () => tempoMultiplier,
     recordManualClick,
     reset: resetFrenzy
