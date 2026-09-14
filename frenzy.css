@@ -1,0 +1,132 @@
+.roll-card {
+  grid-template-rows: 34px var(--dice-zone-height) 96px 44px;
+}
+
+.frenzy-meter {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  align-content: center;
+  gap: 5px;
+  padding: 5px 10px 6px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(15, 20, 29, 0.72);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.025);
+  pointer-events: none;
+  opacity: 0.7;
+  transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+}
+
+.frenzy-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 9px;
+  align-items: center;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.frenzy-label,
+.frenzy-cps {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#frenzyMultiplierValue {
+  color: #d8ddea;
+  font-size: 0.76rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.frenzy-cps {
+  min-width: 42px;
+  text-align: right;
+  letter-spacing: 0.02em;
+}
+
+.frenzy-track {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.32);
+}
+
+.frenzy-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--success), var(--gem), var(--accent-strong));
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 70ms linear;
+}
+
+.frenzy-meter.is-active {
+  border-color: rgba(143, 231, 255, 0.28);
+  background: rgba(143, 231, 255, 0.055);
+  opacity: 1;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.04), 0 0 22px rgba(143, 231, 255, 0.06);
+}
+
+.frenzy-meter.is-active #frenzyMultiplierValue {
+  color: var(--gem);
+}
+
+.frenzy-meter.is-hot {
+  border-color: rgba(165, 156, 255, 0.48);
+  box-shadow: 0 0 28px rgba(138, 125, 255, 0.12);
+}
+
+.frenzy-meter.is-hot #frenzyMultiplierValue {
+  color: var(--accent-strong);
+}
+
+.frenzy-meter.is-maxed {
+  border-color: rgba(255, 211, 138, 0.72);
+  background: rgba(255, 211, 138, 0.075);
+  box-shadow: 0 0 34px rgba(255, 211, 138, 0.14);
+  animation: frenzy-max-pulse 700ms ease-in-out infinite alternate;
+}
+
+.frenzy-meter.is-maxed #frenzyMultiplierValue {
+  color: #ffd38a;
+  text-shadow: 0 0 12px rgba(255, 211, 138, 0.3);
+}
+
+@keyframes frenzy-max-pulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.006); }
+}
+
+@media (max-height: 690px) {
+  .roll-card {
+    grid-template-rows: 34px var(--dice-zone-height) 88px 38px;
+  }
+
+  .frenzy-meter {
+    height: 38px;
+    gap: 4px;
+    padding-block: 4px;
+  }
+
+  .frenzy-track {
+    height: 7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frenzy-meter.is-maxed {
+    animation: none;
+  }
+}
