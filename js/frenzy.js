@@ -1,13 +1,13 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-frenzy3";
+  const BUILD = "20260914-frenzy4";
   const SAVE_KEY = "nightIdle.save.v1";
   const PRESTIGE_SKILL_ID = "frenzy_mastery";
   const ACTIVE_CPS = 3;
   const BASE_MAX_MULTIPLIER = 10;
   const BAR_MULTIPLIER_STEP = 0.5;
-  const BAR_FILL_SLOWDOWN = 10;
+  const BAR_FILL_SLOWDOWN = 10 / 3;
   const CPS_WINDOW_MS = 1000;
   const SOFT_DECAY_DELAY_MS = 460;
   const HARD_DECAY_DELAY_MS = 900;
@@ -137,7 +137,7 @@
   function barGainForCps(value) {
     if (value < ACTIVE_CPS || barProgress >= maxBars()) return 0;
 
-    // Ancien remplissage / 10 : une barre complète prend environ dix fois plus longtemps.
+    // Même logique qu'avant, mais la vitesse de base est désormais ×3 par rapport à frenzy3.
     const oldGain = Math.min(0.064, 0.018 + (value - ACTIVE_CPS) * 0.009);
     return (oldGain / BAR_FILL_SLOWDOWN) * chargeSpeedMultiplier();
   }
@@ -165,7 +165,6 @@
   }
 
   function desiredTempoMultiplier() {
-    // La musique dépend surtout du rythme manuel. La progression globale n'ajoute qu'un léger bonus.
     const cpsBoost = Math.max(0, Math.min(0.24, (cps - 1) * 0.034));
     const progressionRatio = maxBars() > 0 ? barProgress / maxBars() : 0;
     const frenzyBoost = clamp01(progressionRatio) * 0.08;
@@ -248,7 +247,6 @@
               nextLevel = clampPrestigeLevel(parsed?.prestigeUpgrades?.[PRESTIGE_SKILL_ID]);
             }
           } catch {
-            // Laisser la chaîne de sauvegarde gérer une éventuelle valeur invalide.
           }
         }
 
@@ -343,7 +341,7 @@
   requestAnimationFrame(tick);
 
   window.NightIdleFrenzy = Object.freeze({
-    version: 3,
+    version: 4,
     multiplier: () => currentMultiplier(),
     maxMultiplier: () => maxMultiplier(),
     maxBars: () => maxBars(),
