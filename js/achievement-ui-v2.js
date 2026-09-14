@@ -3,7 +3,7 @@
 
   const API = window.NightIdleAchievements;
   if (!API) return;
-  const BUILD = "20260914-achievements2";
+  const BUILD = "20260914-challenge-achievements1";
   let activeCategory = "progression";
   let activeView = "achievements";
   let toastTimer = 0;
@@ -150,6 +150,7 @@
     const maxed = level >= API.multiplierCosts.length;
     const cost = maxed ? 0 : API.multiplierCosts[level];
     const next = maxed ? s.gainMultiplier : Math.min(10, 1 + (level + 1) * 0.9);
+    const surplus = Math.max(0, s.maxAP - s.maxCost);
     node.innerHTML = `
       <article class="achievement-shop-card${maxed ? " is-maxed" : ""}">
         <div class="achievement-shop-title">
@@ -163,9 +164,9 @@
         </button>
       </article>
       <div class="achievement-budget-note">
-        <strong>Budget parfaitement fermé</strong>
-        <span>${fmt(s.maxAP)} AP maximum dans les ${fmt(s.maxMilestones)} paliers.</span>
-        <span>${fmt(s.maxCost)} AP nécessaires pour atteindre ×10.</span>
+        <strong>Coût du ×10 réduit à ${fmt(s.maxCost)} AP</strong>
+        <span>${fmt(s.maxAP)} AP maximum peuvent être gagnés dans les ${fmt(s.maxMilestones)} paliers.</span>
+        <span>Une fois le ×10 acheté, jusqu'à ${fmt(surplus)} AP peuvent rester disponibles pour de futures dépenses AP.</span>
       </div>`;
     document.getElementById("buyAchievementMultiplier")?.addEventListener("click", () => {
       if (API.buyMultiplier()) render();
