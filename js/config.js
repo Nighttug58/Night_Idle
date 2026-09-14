@@ -1,5 +1,5 @@
 window.NightIdleConfig = Object.freeze({
-  version: 14,
+  version: 15,
   maxDice: 6,
   dieFaces: 6,
 
@@ -25,6 +25,17 @@ window.NightIdleConfig = Object.freeze({
     multiplierCosts: Object.freeze([160, 240, 335, 445, 570, 715, 875, 1050, 1240, 1498]),
     maxMultiplier: 10,
     expectedFamilyCount: 108
+  }),
+
+  mutationSystem: Object.freeze({
+    baseProcChance: 0.0012,
+    chancePerLevel: 0.10,
+    baseMinDuration: 3,
+    baseMaxDuration: 5,
+    absoluteMaxDuration: 10,
+    powerPerLevel: 0.05,
+    pityStartRolls: 750,
+    pityNearGuaranteeRolls: 2500
   }),
 
   prestigeShop: Object.freeze([
@@ -118,6 +129,41 @@ window.NightIdleConfig = Object.freeze({
       description: "Débloque définitivement les événements rares de lancer : Dé Doré, Rush Frénétique, Combo Fever et Jackpot.",
       maxLevel: 1,
       costs: Object.freeze([5])
+    }),
+    Object.freeze({
+      id: "mutation_unlock",
+      name: "Éveil des Dés Mutants",
+      description: "Débloque définitivement les Dés Mutants temporaires et leurs 7 variantes.",
+      maxLevel: 1,
+      costs: Object.freeze([15])
+    }),
+    Object.freeze({
+      id: "mutation_chance",
+      name: "Instabilité Mutagène",
+      description: "Augmente de +10 % relatif par niveau la chance d'apparition d'un Dé Mutant.",
+      maxLevel: 20,
+      costs: Object.freeze([3, 4, 5, 6, 8, 10, 12, 15, 18, 22, 27, 33, 40, 48, 57, 68, 80, 94, 110, 128])
+    }),
+    Object.freeze({
+      id: "mutation_duration",
+      name: "Mutation Persistante",
+      description: "Augmente la durée maximale d'un Dé Mutant de +1 lancer par niveau, jusqu'à 10 lancers.",
+      maxLevel: 5,
+      costs: Object.freeze([5, 8, 12, 18, 27])
+    }),
+    Object.freeze({
+      id: "mutation_power",
+      name: "Puissance Mutagène",
+      description: "Renforce de +5 % par niveau les effets positifs des Dés Mutants et réduit certains risques.",
+      maxLevel: 10,
+      costs: Object.freeze([5, 7, 10, 14, 20, 28, 39, 54, 74, 100])
+    }),
+    Object.freeze({
+      id: "mutation_slots",
+      name: "Double Mutation",
+      description: "Autorise jusqu'à 2 Dés Mutants actifs simultanément, sur deux dés différents.",
+      maxLevel: 1,
+      costs: Object.freeze([75])
     }),
     Object.freeze({
       id: "cost_curve_mastery",
