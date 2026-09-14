@@ -1,5 +1,5 @@
 window.NightIdleConfig = Object.freeze({
-  version: 3,
+  version: 4,
   maxDice: 6,
   dieFaces: 6,
 
@@ -9,6 +9,12 @@ window.NightIdleConfig = Object.freeze({
     4: 5000,
     5: 50000,
     6: 500000
+  }),
+
+  prestige: Object.freeze({
+    pointScale: 1000000,
+    gemCoefficient: 5,
+    minimumGems: 1
   }),
 
   upgrades: Object.freeze([
