@@ -1,16 +1,41 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-frenzy3";
+  const BUILD = "20260914-touch1";
 
-  // Chrome/Android ajoute par défaut un flash bleu sur les zones tactiles.
-  // On le supprime sans toucher au focus-visible clavier défini dans styles.css.
+  // Supprime totalement le flash/tap highlight natif Android/Chrome sur l'interface.
+  // Le focus clavier reste géré séparément avec :focus-visible dans les CSS du jeu.
   const tapStyle = document.createElement("style");
   tapStyle.textContent = `
+    html,
+    body,
+    body *,
+    body *::before,
+    body *::after {
+      -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
+    }
+
     button,
-    [role="button"] {
-      -webkit-tap-highlight-color: transparent;
+    [role="button"],
+    a,
+    .dice-tray,
+    .die,
+    .roll-card,
+    .result-panel,
+    .stats-grid,
+    .stat-card {
+      -webkit-tap-highlight-color: transparent !important;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
       touch-action: manipulation;
+    }
+
+    button:focus:not(:focus-visible),
+    [role="button"]:focus:not(:focus-visible),
+    a:focus:not(:focus-visible),
+    .dice-tray:focus:not(:focus-visible) {
+      outline: none !important;
     }
   `;
   document.head.appendChild(tapStyle);
