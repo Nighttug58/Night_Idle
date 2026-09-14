@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-stability1";
+  const BUILD = "20260914-stats1";
 
   function loadScript(src) {
     return new Promise((resolve, reject) => {
@@ -19,6 +19,12 @@
       await loadScript("js/stability.js");
     } catch (error) {
       console.warn("[Night Idle] Guard de stabilité indisponible, poursuite du boot.", error);
+    }
+
+    try {
+      await loadScript("js/stats.js");
+    } catch (error) {
+      console.warn("[Night Idle] Statistiques indisponibles, poursuite du boot.", error);
     }
 
     try {
