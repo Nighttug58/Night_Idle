@@ -1,5 +1,5 @@
 window.NightIdleConfig = Object.freeze({
-  version: 11,
+  version: 12,
   maxDice: 6,
   dieFaces: 6,
 
@@ -102,6 +102,13 @@ window.NightIdleConfig = Object.freeze({
       maxLevel: 2,
       costs: Object.freeze([25, 75]),
       startingDiceByLevel: Object.freeze([1, 2, 3])
+    }),
+    Object.freeze({
+      id: "anomaly_unlock",
+      name: "Déverrouillage des Anomalies",
+      description: "Débloque définitivement les événements rares de lancer : Dé Doré, Rush Frénétique, Combo Fever et Jackpot.",
+      maxLevel: 1,
+      costs: Object.freeze([5])
     }),
     Object.freeze({
       id: "cost_curve_mastery",
