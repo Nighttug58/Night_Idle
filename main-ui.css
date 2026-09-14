@@ -3,6 +3,10 @@
   padding: 0;
 }
 
+.topbar > div:first-child {
+  display: none;
+}
+
 .currencies-panel {
   width: 100%;
   min-width: 0;
@@ -51,7 +55,7 @@
   justify-content: flex-end;
 }
 
-#rollButton[hidden] {
+#rollButton {
   display: none !important;
 }
 
