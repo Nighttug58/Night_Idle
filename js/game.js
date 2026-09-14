@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-events2";
+  const BUILD = "20260914-achievements1";
 
   // Supprime totalement le flash/tap highlight natif Android/Chrome sur l'interface.
   // Le focus clavier reste géré séparément avec :focus-visible dans les CSS du jeu.
@@ -139,7 +139,7 @@
     if (!patched.includes(gainNeedle)) throw new Error("Formule de gain introuvable");
     patched = patched.replace(
       gainNeedle,
-      `      manualFactor *\n      gemPowerFactor() *\n      (window.NightIdleFrenzy?.multiplier?.() || 1) *\n      (window.NightIdleEvents?.gainMultiplier?.() || 1)\n    );`
+      `      manualFactor *\n      gemPowerFactor() *\n      (window.NightIdleFrenzy?.multiplier?.() || 1) *\n      (window.NightIdleEvents?.gainMultiplier?.() || 1) *\n      (window.NightIdleAchievements?.gainMultiplier?.() || 1)\n    );`
     );
 
     const resolvedNeedle = `    state.bestGain = Math.max(state.bestGain, gain);
@@ -193,7 +193,7 @@
   }
 
   async function boot() {
-    if ((Number(window.NightIdleConfig?.version) || 0) < 12) {
+    if ((Number(window.NightIdleConfig?.version) || 0) < 13) {
       try {
         await loadScript("js/config.js");
       } catch (error) {
@@ -202,6 +202,9 @@
     }
 
     try {
+      if (window.NightIdleOfflineLoaderReady && typeof window.NightIdleOfflineLoaderReady.then === "function") {
+        await window.NightIdleOfflineLoaderReady;
+      }
       if (window.NightIdleOfflineReady && typeof window.NightIdleOfflineReady.then === "function") {
         await window.NightIdleOfflineReady;
       }
@@ -255,6 +258,12 @@
       await loadScript("js/economy.js");
     } catch (error) {
       console.warn("[Night Idle] Maîtrise permanente des coûts indisponible, poursuite du boot.", error);
+    }
+
+    try {
+      await loadScript("js/achievements.js");
+    } catch (error) {
+      console.warn("[Night Idle] Système de Succès indisponible, poursuite du boot.", error);
     }
 
     try {
