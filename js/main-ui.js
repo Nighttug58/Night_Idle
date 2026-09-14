@@ -1,12 +1,6 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-mainui3";
-  const stylesheet = document.createElement("link");
-  stylesheet.rel = "stylesheet";
-  stylesheet.href = `main-ui.css?v=${BUILD}`;
-  document.head.appendChild(stylesheet);
-
   const rollButton = document.getElementById("rollButton");
   const diceTray = document.getElementById("diceTray");
 
@@ -33,7 +27,7 @@
   const topbar = document.querySelector(".topbar");
   const requestFullscreen = root?.requestFullscreen || root?.webkitRequestFullscreen;
   const exitFullscreen = document.exitFullscreen || document.webkitExitFullscreen;
-  let fullscreenButton = null;
+  let fullscreenButton = document.getElementById("fullscreenButton");
 
   function currentFullscreenElement() {
     return document.fullscreenElement || document.webkitFullscreenElement || null;
@@ -62,19 +56,24 @@
   }
 
   if (topbar && typeof requestFullscreen === "function") {
-    fullscreenButton = document.createElement("button");
-    fullscreenButton.id = "fullscreenButton";
-    fullscreenButton.className = "fullscreen-button";
-    fullscreenButton.type = "button";
+    if (!fullscreenButton) {
+      fullscreenButton = document.createElement("button");
+      fullscreenButton.id = "fullscreenButton";
+      fullscreenButton.className = "fullscreen-button";
+      fullscreenButton.type = "button";
+      topbar.prepend(fullscreenButton);
+    }
+
     fullscreenButton.addEventListener("click", (event) => {
       event.stopPropagation();
       toggleFullscreen();
     });
-    topbar.prepend(fullscreenButton);
     renderFullscreenButton();
 
     document.addEventListener("fullscreenchange", renderFullscreenButton);
     document.addEventListener("webkitfullscreenchange", renderFullscreenButton);
+  } else if (fullscreenButton) {
+    fullscreenButton.hidden = true;
   }
 
   function alphabeticSuffix(index) {
@@ -153,5 +152,37 @@
     compactNode(node);
   });
 
-  window.NightIdleMainUI = Object.freeze({ compactNumber, alphabeticSuffix });
+  function verifyHudIntegrity() {
+    const required = [
+      "pointsValue",
+      "gemsValue",
+      "upgradesButton",
+      "combosButton",
+      "diceCountValue",
+      "diceTray",
+      "sumValue",
+      "comboValue",
+      "multiplierValue",
+      "gainValue",
+      "totalRollsValue",
+      "runPointsValue",
+      "bestGainValue",
+      "prestigeButton"
+    ];
+
+    const missing = required.filter((id) => !document.getElementById(id));
+    if (missing.length > 0) {
+      console.error("[Night Idle] HUD incomplet :", missing.join(", "));
+      return false;
+    }
+    return true;
+  }
+
+  verifyHudIntegrity();
+
+  window.NightIdleMainUI = Object.freeze({
+    compactNumber,
+    alphabeticSuffix,
+    verifyHudIntegrity
+  });
 })();
