@@ -3,23 +3,39 @@
 
   const rollButton = document.getElementById("rollButton");
   const diceTray = document.getElementById("diceTray");
+  const appShell = document.querySelector(".app-shell");
 
-  function triggerRoll(event) {
-    if (!rollButton || !diceTray) return;
-    if (event?.target?.closest?.(".locked-die")) return;
+  function isExcludedRollTarget(target) {
+    if (!(target instanceof Element)) return true;
+    if (target.closest(".topbar")) return true;
+    if (target.closest(".footer-actions")) return true;
+    if (target.closest("dialog")) return true;
+    if (target.closest("button, a, input, select, textarea, label")) return true;
+    if (target.closest(".locked-die")) return true;
+    return false;
+  }
+
+  function triggerRoll() {
+    if (!rollButton || rollButton.disabled) return;
     rollButton.click();
+  }
+
+  if (appShell && rollButton) {
+    appShell.addEventListener("click", (event) => {
+      if (isExcludedRollTarget(event.target)) return;
+      triggerRoll();
+    });
   }
 
   if (diceTray && rollButton) {
     diceTray.tabIndex = 0;
     diceTray.setAttribute("role", "button");
     diceTray.setAttribute("aria-label", "Lancer les dés");
-    diceTray.addEventListener("click", triggerRoll);
     diceTray.addEventListener("keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       if (event.target?.closest?.(".locked-die")) return;
       event.preventDefault();
-      triggerRoll(event);
+      triggerRoll();
     });
   }
 
@@ -183,6 +199,7 @@
   window.NightIdleMainUI = Object.freeze({
     compactNumber,
     alphabeticSuffix,
-    verifyHudIntegrity
+    verifyHudIntegrity,
+    triggerRoll
   });
 })();
