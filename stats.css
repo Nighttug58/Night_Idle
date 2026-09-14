@@ -1,0 +1,124 @@
+.stats-button {
+  color: var(--accent-strong);
+}
+
+.stats-modal-card {
+  width: 100%;
+}
+
+.stats-modal-scroll {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+  padding-right: 2px;
+}
+
+.lifetime-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.lifetime-stats-grid.compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.lifetime-stat-card {
+  min-width: 0;
+  padding: 10px 11px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface-2);
+}
+
+.lifetime-stat-card span {
+  display: block;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.65rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lifetime-stat-card strong {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: #f5f7fb;
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stats-subtitle {
+  margin: 2px 0 -2px;
+  color: var(--accent-strong);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.stats-note {
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: 0.65rem;
+  line-height: 1.35;
+}
+
+.combo-stats-list {
+  display: grid;
+  gap: 6px;
+}
+
+.combo-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface-2);
+}
+
+.combo-stat-row span {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combo-stat-row strong {
+  flex: 0 0 auto;
+  color: var(--success);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.combo-stat-row.muted-row strong {
+  color: var(--muted);
+}
+
+@media (max-width: 390px) {
+  .lifetime-stats-grid,
+  .lifetime-stats-grid.compact {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .lifetime-stat-card {
+    padding: 8px 9px;
+  }
+
+  .lifetime-stat-card span {
+    font-size: 0.59rem;
+  }
+
+  .lifetime-stat-card strong {
+    font-size: 0.82rem;
+  }
+}
