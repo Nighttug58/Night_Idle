@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-touch1";
+  const BUILD = "20260914-frenzy4";
 
   // Supprime totalement le flash/tap highlight natif Android/Chrome sur l'interface.
   // Le focus clavier reste géré séparément avec :focus-visible dans les CSS du jeu.
@@ -115,8 +115,6 @@
   }
 
   async function boot() {
-    // L'index peut encore avoir une ancienne config en cache. Recharge uniquement si nécessaire,
-    // avec le BUILD courant, avant que les modules runtime ne capturent NightIdleConfig.
     if ((Number(window.NightIdleConfig?.version) || 0) < 9) {
       try {
         await loadScript("js/config.js");
