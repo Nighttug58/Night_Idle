@@ -1,5 +1,5 @@
 window.NightIdleConfig = Object.freeze({
-  version: 15,
+  version: 16,
   maxDice: 6,
   dieFaces: 6,
 
@@ -22,9 +22,9 @@ window.NightIdleConfig = Object.freeze({
     tierRewards: Object.freeze([1, 2, 3, 4, 5, 6, 8, 10, 12, 15]),
     multiplierMaxLevel: 10,
     multiplierPerLevel: 0.9,
-    multiplierCosts: Object.freeze([160, 240, 335, 445, 570, 715, 875, 1050, 1240, 1498]),
+    multiplierCosts: Object.freeze([100, 150, 225, 300, 400, 500, 625, 750, 875, 1075]),
     maxMultiplier: 10,
-    expectedFamilyCount: 108
+    expectedFamilyCount: 118
   }),
 
   mutationSystem: Object.freeze({
