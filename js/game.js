@@ -7,21 +7,43 @@
 
   const $ = (id) => document.getElementById(id);
   const ui = {
-    points: $("pointsValue"), diceCount: $("diceCountValue"), diceTray: $("diceTray"),
-    sum: $("sumValue"), combo: $("comboValue"), multiplier: $("multiplierValue"), gain: $("gainValue"),
-    roll: $("rollButton"), nextPanel: $("nextDiePanel"), nextLabel: $("nextDieLabel"),
-    nextCost: $("nextDieCost"), buy: $("buyDieButton"), maxPanel: $("maxDicePanel"),
-    combos: $("combosList"), rolls: $("totalRollsValue"), earned: $("totalEarnedValue"),
-    best: $("bestGainValue"), reset: $("resetButton")
+    points: $("pointsValue"),
+    diceCount: $("diceCountValue"),
+    diceTray: $("diceTray"),
+    sum: $("sumValue"),
+    combo: $("comboValue"),
+    multiplier: $("multiplierValue"),
+    gain: $("gainValue"),
+    roll: $("rollButton"),
+    combosButton: $("combosButton"),
+    combosModal: $("combosModal"),
+    closeCombos: $("closeCombosButton"),
+    combos: $("combosList"),
+    rolls: $("totalRollsValue"),
+    earned: $("totalEarnedValue"),
+    best: $("bestGainValue"),
+    reset: $("resetButton")
   };
 
-  const freshState = () => ({ points: 0, diceCount: 1, totalRolls: 0, totalEarned: 0, bestGain: 0, lastRoll: [], lastResult: null });
+  const freshState = () => ({
+    points: 0,
+    diceCount: 1,
+    totalRolls: 0,
+    totalEarned: 0,
+    bestGain: 0,
+    lastRoll: [],
+    lastResult: null
+  });
 
   function load() {
     try {
       const saved = JSON.parse(localStorage.getItem(SAVE_KEY));
       if (!saved) return freshState();
-      return { ...freshState(), ...saved, diceCount: Math.max(1, Math.min(CONFIG.maxDice, Number(saved.diceCount) || 1)) };
+      return {
+        ...freshState(),
+        ...saved,
+        diceCount: Math.max(1, Math.min(CONFIG.maxDice, Number(saved.diceCount) || 1))
+      };
     } catch {
       return freshState();
     }
@@ -90,14 +112,22 @@
   }
 
   function roll() {
-    const values = Array.from({ length: state.diceCount }, () => Math.floor(Math.random() * 6) + 1);
+    const values = Array.from(
+      { length: state.diceCount },
+      () => Math.floor(Math.random() * CONFIG.dieFaces) + 1
+    );
     const sum = values.reduce((a, b) => a + b, 0);
     const combo = bestCombo(values);
     const multiplier = combo ? combo.multiplier : 1;
     const gain = sum * multiplier;
 
     state.lastRoll = values;
-    state.lastResult = { sum, comboName: combo ? combo.name : "Aucune", multiplier, gain };
+    state.lastResult = {
+      sum,
+      comboName: combo ? combo.name : "Aucune",
+      multiplier,
+      gain
+    };
     state.points += gain;
     state.totalRolls += 1;
     state.totalEarned += gain;
@@ -106,24 +136,55 @@
     render(true);
   }
 
-  function buyDie() {
+  function buyNextDie() {
     if (state.diceCount >= CONFIG.maxDice) return;
-    const cost = CONFIG.dieUnlockCosts[state.diceCount + 1];
+    const nextDie = state.diceCount + 1;
+    const cost = CONFIG.dieUnlockCosts[nextDie];
     if (state.points < cost) return;
+
     state.points -= cost;
-    state.diceCount += 1;
+    state.diceCount = nextDie;
     save();
     render(false);
   }
 
+  function createOwnedDie(index, animate) {
+    const die = document.createElement("div");
+    die.className = `die${animate ? " is-rolling" : ""}`;
+    die.setAttribute("aria-label", `Dé ${index + 1}`);
+    const value = state.lastRoll[index];
+    die.textContent = value ? SYMBOLS[value - 1] : "?";
+    return die;
+  }
+
+  function createLockedDie() {
+    const nextDie = state.diceCount + 1;
+    const cost = CONFIG.dieUnlockCosts[nextDie];
+    const affordable = state.points >= cost;
+    const slot = document.createElement("button");
+    slot.type = "button";
+    slot.className = `die locked-die${affordable ? " is-affordable" : ""}`;
+    slot.disabled = !affordable;
+    slot.setAttribute(
+      "aria-label",
+      affordable
+        ? `Débloquer le dé ${nextDie} pour ${fmt(cost)} points`
+        : `Dé ${nextDie} verrouillé, coût ${fmt(cost)} points`
+    );
+    slot.innerHTML = `<span class="lock-icon" aria-hidden="true">🔒</span><small>${fmt(cost)} pts</small>`;
+    slot.addEventListener("click", buyNextDie);
+    return slot;
+  }
+
   function renderDice(animate) {
     ui.diceTray.replaceChildren();
+
     for (let i = 0; i < state.diceCount; i += 1) {
-      const die = document.createElement("div");
-      die.className = `die${animate ? " is-rolling" : ""}`;
-      const value = state.lastRoll[i];
-      die.textContent = value ? SYMBOLS[value - 1] : "?";
-      ui.diceTray.appendChild(die);
+      ui.diceTray.appendChild(createOwnedDie(i, animate));
+    }
+
+    if (state.diceCount < CONFIG.maxDice) {
+      ui.diceTray.appendChild(createLockedDie());
     }
   }
 
@@ -133,7 +194,8 @@
       const unlocked = state.diceCount >= combo.minDice;
       const row = document.createElement("div");
       row.className = `combo-row${unlocked ? "" : " is-locked"}`;
-      row.innerHTML = `<span class="combo-name">${unlocked ? combo.name : `${combo.name} · ${combo.minDice} dés`}</span><span class="combo-example">${combo.example}</span><span class="combo-multiplier">×${combo.multiplier}</span>`;
+      row.innerHTML = `<span class="combo-name">${combo.name}</span><span class="combo-example">${combo.example}</span><span class="combo-multiplier">×${combo.multiplier}</span>`;
+      if (!unlocked) row.title = `Disponible à partir de ${combo.minDice} dés`;
       ui.combos.appendChild(row);
     });
   }
@@ -149,18 +211,6 @@
     ui.multiplier.textContent = `×${result ? result.multiplier : 1}`;
     ui.gain.textContent = `+${fmt(result ? result.gain : 0)}`;
 
-    const maxed = state.diceCount >= CONFIG.maxDice;
-    ui.nextPanel.hidden = maxed;
-    ui.maxPanel.hidden = !maxed;
-    if (!maxed) {
-      const next = state.diceCount + 1;
-      const cost = CONFIG.dieUnlockCosts[next];
-      ui.nextLabel.textContent = `Dé n°${next}`;
-      ui.nextCost.textContent = `${fmt(cost)} points`;
-      ui.buy.disabled = state.points < cost;
-      ui.buy.textContent = state.points >= cost ? "ACHETER" : "PAS ASSEZ DE POINTS";
-    }
-
     ui.rolls.textContent = fmt(state.totalRolls);
     ui.earned.textContent = fmt(state.totalEarned);
     ui.best.textContent = fmt(state.bestGain);
@@ -168,7 +218,11 @@
   }
 
   ui.roll.addEventListener("click", roll);
-  ui.buy.addEventListener("click", buyDie);
+  ui.combosButton.addEventListener("click", () => ui.combosModal.showModal());
+  ui.closeCombos.addEventListener("click", () => ui.combosModal.close());
+  ui.combosModal.addEventListener("click", (event) => {
+    if (event.target === ui.combosModal) ui.combosModal.close();
+  });
   ui.reset.addEventListener("click", () => {
     if (!window.confirm("Réinitialiser toute la progression ?")) return;
     state = freshState();
