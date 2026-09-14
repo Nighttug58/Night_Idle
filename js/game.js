@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-music1";
+  const BUILD = "20260914-offline-claim1";
 
   function loadScript(src) {
     return new Promise((resolve, reject) => {
@@ -15,6 +15,14 @@
   }
 
   async function boot() {
+    try {
+      if (window.NightIdleOfflineReady && typeof window.NightIdleOfflineReady.then === "function") {
+        await window.NightIdleOfflineReady;
+      }
+    } catch (error) {
+      console.warn("[Night Idle] Validation offline interrompue, poursuite du boot.", error);
+    }
+
     try {
       await loadScript("js/stability.js");
     } catch (error) {
