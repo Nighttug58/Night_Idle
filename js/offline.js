@@ -4,22 +4,40 @@
   const CONFIG = window.NightIdleConfig;
   const SAVE_KEY = "nightIdle.save.v1";
   const SNAPSHOT_KEY = "nightIdle.offline.snapshot.v1";
-  const nativeSetItem = Storage.prototype.setItem;
-  const nativeRemoveItem = Storage.prototype.removeItem;
-  const minimumOfflineMs = Math.max(0, Number(CONFIG.prestige.minimumOfflineMs) || 0);
+  const minimumOfflineMs = Math.max(0, Number(CONFIG?.prestige?.minimumOfflineMs) || 0);
+
+  const storageProto = window.Storage?.prototype;
+  const nativeSetItem = storageProto?.setItem;
+  const nativeRemoveItem = storageProto?.removeItem;
+
+  function nativeWrite(storage, key, value) {
+    if (nativeSetItem) return nativeSetItem.call(storage, key, value);
+    return storage.setItem(key, value);
+  }
+
+  function nativeRemove(storage, key) {
+    if (nativeRemoveItem) return nativeRemoveItem.call(storage, key);
+    return storage.removeItem(key);
+  }
 
   function readJson(storage, key) {
     try {
-      return JSON.parse(storage.getItem(key));
-    } catch {
+      const raw = storage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+      console.warn("[Night Idle] Lecture sauvegarde offline impossible", error);
       return null;
     }
   }
 
   function writeSave(save, timestamp = Date.now()) {
     if (!save || typeof save !== "object") return;
-    const payload = { ...save, lastSaveAt: timestamp };
-    nativeSetItem.call(localStorage, SAVE_KEY, JSON.stringify(payload));
+    try {
+      const payload = { ...save, lastSaveAt: timestamp };
+      nativeWrite(localStorage, SAVE_KEY, JSON.stringify(payload));
+    } catch (error) {
+      console.warn("[Night Idle] Écriture sauvegarde offline impossible", error);
+    }
   }
 
   function prestigeUpgrade(id) {
@@ -166,9 +184,7 @@
 
   function encodeRoll(values) {
     let key = 0;
-    values.forEach((value) => {
-      key = key * 7 + value;
-    });
+    for (let index = 0; index < values.length; index += 1) key = key * 7 + values[index];
     return key;
   }
 
@@ -177,15 +193,18 @@
     const faces = CONFIG.dieFaces;
     const fate = fateChance(save);
     const gainFactor = dieValue(save) * globalPower(save) * gemPower(save);
-    const scoreCache = new Map();
+    const maxCacheKey = Math.pow(7, diceCount + 1);
+    const scoreCache = new Float64Array(maxCacheKey);
+    const scoreKnown = new Uint8Array(maxCacheKey);
 
     function score(values) {
       const key = encodeRoll(values);
-      if (scoreCache.has(key)) return scoreCache.get(key);
+      if (scoreKnown[key]) return scoreCache[key];
       const sum = values.reduce((total, value) => total + value, 0);
       const combo = bestCombo(save, values);
       const result = sum * comboMultiplier(save, combo);
-      scoreCache.set(key, result);
+      scoreKnown[key] = 1;
+      scoreCache[key] = result;
       return result;
     }
 
@@ -268,72 +287,86 @@
 
     const averageGain = expectedGainPerAutoRoll(save);
     const gain = Math.round(rolls * averageGain * efficiency * 100) / 100;
-    if (gain <= 0) return null;
+    if (!Number.isFinite(gain) || gain <= 0) return null;
 
-    return {
-      awayMs,
-      countedMs,
-      reserveMs,
-      efficiency,
-      rolls,
-      averageGain,
-      gain
-    };
+    return { awayMs, countedMs, reserveMs, efficiency, rolls, averageGain, gain };
   }
 
   function consumeOfflineProgress() {
-    const now = Date.now();
-    let save = readJson(localStorage, SAVE_KEY);
-    const snapshot = readJson(localStorage, SNAPSHOT_KEY);
-    let departureTimestamp = Number(save?.lastSaveAt) || now;
+    try {
+      const now = Date.now();
+      let save = readJson(localStorage, SAVE_KEY);
+      const snapshot = readJson(localStorage, SNAPSHOT_KEY);
+      let departureTimestamp = Number(save?.lastSaveAt) || now;
 
-    if (snapshot?.save && Number(snapshot.hiddenAt) > 0 && now >= Number(snapshot.hiddenAt)) {
-      save = snapshot.save;
-      departureTimestamp = Number(snapshot.hiddenAt);
-      nativeRemoveItem.call(localStorage, SNAPSHOT_KEY);
+      if (snapshot?.save && Number(snapshot.hiddenAt) > 0 && now >= Number(snapshot.hiddenAt)) {
+        save = snapshot.save;
+        departureTimestamp = Number(snapshot.hiddenAt);
+        nativeRemove(localStorage, SNAPSHOT_KEY);
+      }
+
+      if (!save) return null;
+
+      const report = calculateOffline(save, now, departureTimestamp);
+      if (report) {
+        save.points = Math.max(0, Number(save.points) || 0) + report.gain;
+        save.runPointsEarned = Math.max(0, Number(save.runPointsEarned ?? save.totalEarned) || 0) + report.gain;
+        save.totalRolls = Math.max(0, Math.floor(Number(save.totalRolls) || 0)) + report.rolls;
+      }
+
+      // Consomme immédiatement la période afin qu'un refresh ne puisse pas redonner le même revenu.
+      writeSave(save, now);
+      return report;
+    } catch (error) {
+      console.error("[Night Idle] Le revenu hors ligne a été ignoré pour préserver le boot.", error);
+      return null;
     }
-
-    if (!save) return null;
-
-    const report = calculateOffline(save, now, departureTimestamp);
-    if (report) {
-      save.points = Math.max(0, Number(save.points) || 0) + report.gain;
-      save.runPointsEarned = Math.max(0, Number(save.runPointsEarned ?? save.totalEarned) || 0) + report.gain;
-      save.totalRolls = Math.max(0, Math.floor(Number(save.totalRolls) || 0)) + report.rolls;
-    }
-
-    writeSave(save, now);
-    return report;
   }
 
   const offlineReport = consumeOfflineProgress();
 
-  Storage.prototype.setItem = function patchedSetItem(key, value) {
-    if (this === localStorage && key === SAVE_KEY) {
-      try {
-        const parsed = JSON.parse(value);
-        if (parsed && typeof parsed === "object") {
-          parsed.lastSaveAt = Date.now();
-          return nativeSetItem.call(this, key, JSON.stringify(parsed));
+  // Ajoute automatiquement un timestamp à toutes les futures sauvegardes sans modifier game.js.
+  // Le patch est volontairement protégé : s'il est refusé par un navigateur, le jeu continue quand même.
+  if (storageProto && nativeSetItem) {
+    try {
+      storageProto.setItem = function patchedSetItem(key, value) {
+        if (this === localStorage && key === SAVE_KEY) {
+          try {
+            const parsed = JSON.parse(value);
+            if (parsed && typeof parsed === "object") {
+              parsed.lastSaveAt = Date.now();
+              return nativeSetItem.call(this, key, JSON.stringify(parsed));
+            }
+          } catch {
+            // Valeur non JSON : conserver le comportement natif.
+          }
         }
-      } catch {
-        // Fall through to the native value when it is not valid JSON.
-      }
+        return nativeSetItem.call(this, key, value);
+      };
+    } catch (error) {
+      console.warn("[Night Idle] Timestamp automatique indisponible, fallback pagehide actif.", error);
     }
-    return nativeSetItem.call(this, key, value);
-  };
+  }
 
   function captureOfflineSnapshot() {
-    const save = readJson(localStorage, SAVE_KEY);
-    if (!save) return;
-    const hiddenAt = Date.now();
-    const snapshot = { save: { ...save, lastSaveAt: hiddenAt }, hiddenAt };
-    nativeSetItem.call(localStorage, SNAPSHOT_KEY, JSON.stringify(snapshot));
-    writeSave(save, hiddenAt);
+    try {
+      const save = readJson(localStorage, SAVE_KEY);
+      if (!save) return;
+      const hiddenAt = Date.now();
+      const snapshot = { save: { ...save, lastSaveAt: hiddenAt }, hiddenAt };
+      nativeWrite(localStorage, SNAPSHOT_KEY, JSON.stringify(snapshot));
+      writeSave(save, hiddenAt);
+    } catch (error) {
+      console.warn("[Night Idle] Snapshot offline impossible", error);
+    }
   }
 
   function clearSnapshot() {
-    nativeRemoveItem.call(localStorage, SNAPSHOT_KEY);
+    try {
+      nativeRemove(localStorage, SNAPSHOT_KEY);
+    } catch {
+      // Rien à faire.
+    }
   }
 
   document.addEventListener("visibilitychange", () => {
@@ -346,7 +379,12 @@
     if (!snapshot?.save || !snapshot.hiddenAt) return;
     const awayMs = Date.now() - Number(snapshot.hiddenAt);
 
-    if (awayMs >= minimumOfflineMs && autoClickInterval(snapshot.save) > 0 && offlineEfficiency(snapshot.save) > 0) {
+    if (
+      awayMs >= minimumOfflineMs &&
+      autoClickInterval(snapshot.save) > 0 &&
+      offlineEfficiency(snapshot.save) > 0
+    ) {
+      // Le reload fait recalculer la période depuis le snapshot, une seule fois.
       writeSave(snapshot.save, Number(snapshot.hiddenAt));
       clearSnapshot();
       window.location.reload();
@@ -391,24 +429,48 @@
 
       if (name === "Revenu hors ligne") {
         const upgrade = prestigeUpgrade("offline_income");
-        const current = Math.min(1, level * (upgrade?.efficiencyPerLevel || 0));
-        const next = Math.min(1, (level + 1) * (upgrade?.efficiencyPerLevel || 0));
-        effect.innerHTML = `${formatNumber(current * 100)} %${level >= upgrade.maxLevel ? "" : ` → <strong>${formatNumber(next * 100)} %</strong>`}`;
+        if (!upgrade) return;
+        const current = Math.min(1, level * (upgrade.efficiencyPerLevel || 0));
+        const next = Math.min(1, (level + 1) * (upgrade.efficiencyPerLevel || 0));
+        const html = `${formatNumber(current * 100)} %${level >= upgrade.maxLevel ? "" : ` → <strong>${formatNumber(next * 100)} %</strong>`}`;
+        if (effect.innerHTML !== html) effect.innerHTML = html;
       }
 
       if (name === "Réserve temporelle") {
         const upgrade = prestigeUpgrade("time_reserve");
-        const current = upgrade?.valuesMinutes?.[level] || 10;
-        const next = upgrade?.valuesMinutes?.[Math.min(level + 1, upgrade.maxLevel)] || current;
-        effect.innerHTML = `${formatReserveMinutes(current)}${level >= upgrade.maxLevel ? "" : ` → <strong>${formatReserveMinutes(next)}</strong>`}`;
+        if (!upgrade) return;
+        const current = upgrade.valuesMinutes?.[level] || 10;
+        const next = upgrade.valuesMinutes?.[Math.min(level + 1, upgrade.maxLevel)] || current;
+        const html = `${formatReserveMinutes(current)}${level >= upgrade.maxLevel ? "" : ` → <strong>${formatReserveMinutes(next)}</strong>`}`;
+        if (effect.innerHTML !== html) effect.innerHTML = html;
       }
     });
   }
 
-  const shopList = document.getElementById("prestigeShopList");
-  if (shopList) {
-    new MutationObserver(patchPrestigeShopLabels).observe(shopList, { childList: true, subtree: true });
-    queueMicrotask(patchPrestigeShopLabels);
+  // Important : on déconnecte l'observer pendant le patch.
+  // L'ancienne version observait puis réécrivait son propre subtree en boucle infinie.
+  function installSafeShopObserver() {
+    const list = document.getElementById("prestigeShopList");
+    if (!list || typeof MutationObserver === "undefined") return;
+
+    let scheduled = false;
+    const observer = new MutationObserver(() => {
+      if (scheduled) return;
+      scheduled = true;
+      queueMicrotask(() => {
+        scheduled = false;
+        observer.disconnect();
+        patchPrestigeShopLabels();
+        observer.observe(list, { childList: true, subtree: true });
+      });
+    });
+
+    observer.observe(list, { childList: true, subtree: true });
+    queueMicrotask(() => {
+      observer.disconnect();
+      patchPrestigeShopLabels();
+      observer.observe(list, { childList: true, subtree: true });
+    });
   }
 
   function showOfflineReport(report) {
@@ -416,23 +478,37 @@
     const modal = document.getElementById("offlineModal");
     if (!modal) return;
 
-    document.getElementById("offlineGainValue").textContent = `+${formatNumber(report.gain)}`;
-    document.getElementById("offlineAwayValue").textContent = formatDuration(report.awayMs);
-    document.getElementById("offlineCountedValue").textContent = formatDuration(report.countedMs);
-    document.getElementById("offlineReserveValue").textContent = formatDuration(report.reserveMs);
-    document.getElementById("offlineEfficiencyValue").textContent = `${formatNumber(report.efficiency * 100)} %`;
-    document.getElementById("offlineRollsValue").textContent = formatNumber(report.rolls);
-    document.getElementById("offlineAverageValue").textContent = formatNumber(report.averageGain);
+    const setText = (id, value) => {
+      const node = document.getElementById(id);
+      if (node) node.textContent = value;
+    };
 
-    const close = () => modal.close();
+    setText("offlineGainValue", `+${formatNumber(report.gain)}`);
+    setText("offlineAwayValue", formatDuration(report.awayMs));
+    setText("offlineCountedValue", formatDuration(report.countedMs));
+    setText("offlineReserveValue", formatDuration(report.reserveMs));
+    setText("offlineEfficiencyValue", `${formatNumber(report.efficiency * 100)} %`);
+    setText("offlineRollsValue", formatNumber(report.rolls));
+    setText("offlineAverageValue", formatNumber(report.averageGain));
+
+    const close = () => {
+      if (modal.open) modal.close();
+    };
+
     document.getElementById("closeOfflineButton")?.addEventListener("click", close, { once: true });
     document.getElementById("claimOfflineButton")?.addEventListener("click", close, { once: true });
-    modal.addEventListener("click", (event) => {
-      if (event.target === modal) close();
-    }, { once: true });
+    modal.addEventListener(
+      "click",
+      (event) => {
+        if (event.target === modal) close();
+      },
+      { once: true }
+    );
 
-    modal.showModal();
+    if (typeof modal.showModal === "function") modal.showModal();
   }
+
+  installSafeShopObserver();
 
   window.setTimeout(() => {
     patchPrestigeShopLabels();
