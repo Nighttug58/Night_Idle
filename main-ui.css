@@ -1,16 +1,23 @@
 .topbar {
   position: relative;
+  display: flex;
+  width: 100%;
   min-height: 56px;
   padding: 0;
+  align-items: center;
 }
 
 .currencies-panel {
+  display: grid;
   width: 100%;
   min-width: 0;
   height: 56px;
   grid-template-columns: minmax(0, 1fr) 1px minmax(82px, 0.34fr);
+  align-items: center;
   padding: 8px 14px 8px 58px;
   border-radius: 18px;
+  visibility: visible;
+  opacity: 1;
 }
 
 .fullscreen-button {
@@ -51,6 +58,7 @@
 }
 
 .currency-block {
+  min-width: 0;
   text-align: left;
 }
 
@@ -70,23 +78,41 @@
 }
 
 .roll-card {
-  grid-template-rows: 32px minmax(0, 1fr) 96px;
+  grid-template-rows: 34px var(--dice-zone-height) 96px;
   gap: clamp(8px, 1.4dvh, 12px);
 }
 
 .section-heading {
-  height: 32px;
-  min-height: 32px;
-  justify-content: flex-end;
-}
-
-.section-heading > div:first-child {
-  display: none;
-}
-
-.heading-actions {
+  display: flex;
   width: 100%;
+  height: 34px;
+  min-height: 34px;
+  align-items: center;
   justify-content: flex-end;
+  overflow: visible;
+}
+
+/* Important : ne jamais masquer le premier enfant ici. Depuis la refonte,
+   .heading-actions est l'unique enfant de .section-heading. */
+.section-heading > .heading-actions {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  visibility: visible;
+  opacity: 1;
+}
+
+#upgradesButton,
+#combosButton,
+.dice-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
 }
 
 #rollButton {
@@ -118,6 +144,66 @@
   transform: scale(0.97);
 }
 
+.result-panel,
+.stats-grid,
+.footer-actions {
+  visibility: visible;
+  opacity: 1;
+}
+
+.footer-actions {
+  gap: 8px;
+}
+
+.footer-buttons {
+  min-width: 0;
+  gap: 7px;
+}
+
+.footer-buttons > button {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 520px) {
+  .app-shell {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .footer-actions {
+    align-items: flex-end;
+  }
+
+  .footer-actions > #prestigeStatusText {
+    max-width: 32%;
+  }
+
+  .footer-buttons {
+    gap: 5px;
+  }
+
+  .footer-buttons .prestige-button,
+  .footer-buttons .text-button {
+    font-size: 0.58rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .footer-actions > #prestigeStatusText {
+    display: none;
+  }
+
+  .footer-buttons {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .footer-buttons .prestige-button,
+  .footer-buttons .text-button {
+    font-size: 0.56rem;
+  }
+}
+
 @media (max-height: 700px) {
   .topbar,
   .currencies-panel {
@@ -138,11 +224,11 @@
   }
 
   .roll-card {
-    grid-template-rows: 28px minmax(0, 1fr) 90px;
+    grid-template-rows: 30px var(--dice-zone-height) 90px;
   }
 
   .section-heading {
-    height: 28px;
-    min-height: 28px;
+    height: 30px;
+    min-height: 30px;
   }
 }
