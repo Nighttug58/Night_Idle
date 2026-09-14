@@ -1,13 +1,20 @@
 (() => {
   "use strict";
 
-  const BUILD = "20260914-frenzy1";
+  const BUILD = "20260914-frenzy2";
+  const SAVE_KEY = "nightIdle.save.v1";
+  const PRESTIGE_SKILL_ID = "frenzy_mastery";
   const ACTIVE_CPS = 3;
-  const MAX_MULTIPLIER = 10;
+  const BASE_MAX_MULTIPLIER = 10;
   const CPS_WINDOW_MS = 1000;
   const SOFT_DECAY_DELAY_MS = 460;
   const HARD_DECAY_DELAY_MS = 900;
   const MAX_TEMPO_MULTIPLIER = 1.32;
+
+  const config = window.NightIdleConfig;
+  const prestigeSkill = config?.prestigeShop?.find((upgrade) => upgrade.id === PRESTIGE_SKILL_ID) || null;
+  const storageProto = window.Storage?.prototype;
+  const inheritedSetItem = storageProto?.setItem;
 
   const appShell = document.querySelector(".app-shell");
   const rollCard = document.querySelector(".roll-card");
@@ -26,6 +33,35 @@
   let lastManualClickAt = 0;
   let lastFrameAt = performance.now();
   let lastUiAt = 0;
+  let prestigeLevel = 0;
+
+  function clampPrestigeLevel(value) {
+    const maxLevel = Math.max(0, Number(prestigeSkill?.maxLevel) || 0);
+    return Math.max(0, Math.min(maxLevel, Math.floor(Number(value) || 0)));
+  }
+
+  function readPrestigeLevel() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      const save = raw ? JSON.parse(raw) : null;
+      return clampPrestigeLevel(save?.prestigeUpgrades?.[PRESTIGE_SKILL_ID]);
+    } catch {
+      return 0;
+    }
+  }
+
+  function maxMultiplier() {
+    const base = Number(prestigeSkill?.baseMaxMultiplier) || BASE_MAX_MULTIPLIER;
+    const perLevel = Number(prestigeSkill?.maxMultiplierPerLevel) || 0;
+    return base + prestigeLevel * perLevel;
+  }
+
+  function chargeSpeedMultiplier() {
+    const perLevel = Number(prestigeSkill?.chargeSpeedPerLevel) || 0;
+    return 1 + prestigeLevel * perLevel;
+  }
+
+  prestigeLevel = readPrestigeLevel();
 
   const meter = document.createElement("div");
   meter.id = "frenzyMeter";
@@ -56,7 +92,7 @@
 
   function currentMultiplier() {
     if (charge <= 0.001) return 1;
-    return 1 + (MAX_MULTIPLIER - 1) * Math.pow(clamp01(charge), 1.08);
+    return 1 + (maxMultiplier() - 1) * Math.pow(clamp01(charge), 1.08);
   }
 
   function trimClicks(now) {
@@ -77,7 +113,8 @@
 
   function chargeGainForCps(value) {
     if (value < ACTIVE_CPS) return 0;
-    return Math.min(0.064, 0.018 + (value - ACTIVE_CPS) * 0.009);
+    const baseGain = Math.min(0.064, 0.018 + (value - ACTIVE_CPS) * 0.009);
+    return baseGain * chargeSpeedMultiplier();
   }
 
   function recordManualClick(now = performance.now()) {
@@ -122,17 +159,19 @@
     lastUiAt = now;
 
     const multiplier = currentMultiplier();
+    const cap = maxMultiplier();
     const active = cps >= ACTIVE_CPS || charge > 0.025;
-    const hot = multiplier >= 5;
-    const maxed = multiplier >= 9.95;
+    const hot = multiplier >= 1 + (cap - 1) * 0.45;
+    const maxed = multiplier >= cap - 0.05;
 
     meter.classList.toggle("is-active", active);
     meter.classList.toggle("is-hot", hot);
     meter.classList.toggle("is-maxed", maxed);
+    meter.title = `Frénésie : maximum ×${cap} · remplissage ×${chargeSpeedMultiplier().toFixed(2)}`;
 
     if (fill) fill.style.transform = `scaleX(${clamp01(charge)})`;
     if (multiplierNode) {
-      multiplierNode.textContent = multiplier <= 1.005 ? "×1" : `×${multiplier.toFixed(multiplier >= 9.95 ? 0 : 2)}`;
+      multiplierNode.textContent = multiplier <= 1.005 ? "×1" : `×${multiplier.toFixed(maxed ? 0 : 2)}`;
     }
     if (cpsNode) cpsNode.textContent = `${cps} CPS`;
   }
@@ -155,6 +194,95 @@
     requestAnimationFrame(tick);
   }
 
+  function applyPrestigeLevel(level) {
+    const next = clampPrestigeLevel(level);
+    if (next === prestigeLevel) return;
+    prestigeLevel = next;
+    render(true);
+  }
+
+  if (storageProto && inheritedSetItem) {
+    try {
+      storageProto.setItem = function nightIdleFrenzySetItem(key, value) {
+        let nextLevel = null;
+
+        if (this === localStorage && key === SAVE_KEY) {
+          try {
+            const parsed = JSON.parse(value);
+            if (parsed && typeof parsed === "object") {
+              nextLevel = clampPrestigeLevel(parsed?.prestigeUpgrades?.[PRESTIGE_SKILL_ID]);
+            }
+          } catch {
+            // Laisser la chaîne de sauvegarde gérer une éventuelle valeur invalide.
+          }
+        }
+
+        const result = inheritedSetItem.call(this, key, value);
+        if (nextLevel !== null) applyPrestigeLevel(nextLevel);
+        return result;
+      };
+    } catch (error) {
+      console.warn("[Night Idle] Mise à jour dynamique de la Frénésie indisponible.", error);
+    }
+  }
+
+  function prestigeEffectText(level) {
+    const clamped = clampPrestigeLevel(level);
+    const base = Number(prestigeSkill?.baseMaxMultiplier) || BASE_MAX_MULTIPLIER;
+    const perMax = Number(prestigeSkill?.maxMultiplierPerLevel) || 0;
+    const perSpeed = Number(prestigeSkill?.chargeSpeedPerLevel) || 0;
+    const cap = base + clamped * perMax;
+    const speedPercent = clamped * perSpeed * 100;
+    return `Remplissage +${Math.round(speedPercent)} % · Max ×${cap}`;
+  }
+
+  function patchPrestigeCard() {
+    if (!prestigeSkill) return;
+    const list = document.getElementById("prestigeShopList");
+    if (!list) return;
+
+    for (const card of list.querySelectorAll(".prestige-shop-card")) {
+      const title = card.querySelector(".upgrade-title-row strong")?.textContent?.trim();
+      if (title !== prestigeSkill.name) continue;
+
+      const levelText = card.querySelector(".upgrade-title-row span")?.textContent || "";
+      const level = clampPrestigeLevel(levelText.match(/Niv\.\s*(\d+)/)?.[1]);
+      const maxed = level >= prestigeSkill.maxLevel;
+      const effect = card.querySelector(".upgrade-effect");
+      if (!effect) return;
+
+      const nextLevel = Math.min(prestigeSkill.maxLevel, level + 1);
+      const html = `${prestigeEffectText(level)}${maxed ? "" : ` → <strong>${prestigeEffectText(nextLevel)}</strong>`}`;
+      if (effect.innerHTML !== html) effect.innerHTML = html;
+      return;
+    }
+  }
+
+  function installShopObserver() {
+    if (!prestigeSkill) return;
+    const list = document.getElementById("prestigeShopList");
+    if (!list || typeof MutationObserver === "undefined") return;
+
+    let scheduled = false;
+    const observer = new MutationObserver(() => {
+      if (scheduled) return;
+      scheduled = true;
+      queueMicrotask(() => {
+        scheduled = false;
+        observer.disconnect();
+        patchPrestigeCard();
+        observer.observe(list, { childList: true, subtree: true });
+      });
+    });
+
+    observer.observe(list, { childList: true, subtree: true });
+    queueMicrotask(() => {
+      observer.disconnect();
+      patchPrestigeCard();
+      observer.observe(list, { childList: true, subtree: true });
+    });
+  }
+
   appShell?.addEventListener("click", (event) => {
     if (!isManualRollTarget(event.target)) return;
     recordManualClick(performance.now());
@@ -174,12 +302,16 @@
     if (document.hidden) resetFrenzy();
   });
 
+  installShopObserver();
   render(true);
   requestAnimationFrame(tick);
 
   window.NightIdleFrenzy = Object.freeze({
-    version: 1,
+    version: 2,
     multiplier: () => currentMultiplier(),
+    maxMultiplier: () => maxMultiplier(),
+    prestigeLevel: () => prestigeLevel,
+    chargeSpeedMultiplier: () => chargeSpeedMultiplier(),
     cps: () => cps,
     charge: () => charge,
     tempoMultiplier: () => tempoMultiplier,
