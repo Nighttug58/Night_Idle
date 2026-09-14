@@ -2,8 +2,11 @@
   "use strict";
 
   const CONFIG = window.NightIdleConfig;
+  if (!CONFIG) return;
+
   const SAVE_KEY = "nightIdle.save.v1";
   const SNAPSHOT_KEY = "nightIdle.offline.snapshot.v1";
+  const PENDING_KEY = "nightIdle.offline.pending.v1";
   const minimumOfflineMs = Math.max(0, Number(CONFIG?.prestige?.minimumOfflineMs) || 0);
 
   const storageProto = window.Storage?.prototype;
@@ -25,18 +28,20 @@
       const raw = storage.getItem(key);
       return raw ? JSON.parse(raw) : null;
     } catch (error) {
-      console.warn("[Night Idle] Lecture sauvegarde offline impossible", error);
+      console.warn("[Night Idle] Lecture stockage offline impossible", error);
       return null;
     }
   }
 
   function writeSave(save, timestamp = Date.now()) {
-    if (!save || typeof save !== "object") return;
+    if (!save || typeof save !== "object") return false;
     try {
       const payload = { ...save, lastSaveAt: timestamp };
       nativeWrite(localStorage, SAVE_KEY, JSON.stringify(payload));
+      return true;
     } catch (error) {
       console.warn("[Night Idle] Écriture sauvegarde offline impossible", error);
+      return false;
     }
   }
 
@@ -237,10 +242,9 @@
           candidateScoreTotal += score(values);
         }
         values[dieIndex] = originalFace;
-
-        const candidateExpectedScore = candidateScoreTotal / faces;
-        if (candidateExpectedScore > bestExpectedScore) {
-          bestExpectedScore = candidateExpectedScore;
+        const expected = candidateScoreTotal / faces;
+        if (expected > bestExpectedScore) {
+          bestExpectedScore = expected;
           bestIndex = dieIndex;
         }
       }
@@ -274,26 +278,51 @@
   }
 
   function calculateOffline(save, now, departureTimestamp) {
-    const interval = autoClickInterval(save);
+    const intervalMs = autoClickInterval(save);
     const efficiency = offlineEfficiency(save);
     const reserveMs = reserveMinutes(save) * 60 * 1000;
     const awayMs = Math.max(0, now - departureTimestamp);
 
-    if (awayMs < minimumOfflineMs || interval <= 0 || efficiency <= 0) return null;
+    if (awayMs < minimumOfflineMs || intervalMs <= 0 || efficiency <= 0) return null;
 
     const countedMs = Math.min(awayMs, reserveMs);
-    const rolls = Math.floor(countedMs / interval);
+    const rolls = Math.floor(countedMs / intervalMs);
     if (rolls <= 0) return null;
 
     const averageGain = expectedGainPerAutoRoll(save);
     const gain = Math.round(rolls * averageGain * efficiency * 100) / 100;
     if (!Number.isFinite(gain) || gain <= 0) return null;
 
-    return { awayMs, countedMs, reserveMs, efficiency, rolls, averageGain, gain };
+    return {
+      awayMs,
+      countedMs,
+      reserveMs,
+      efficiency,
+      rolls,
+      averageGain,
+      gain,
+      intervalMs,
+      diceCount: Math.max(1, Math.min(CONFIG.maxDice, Number(save?.diceCount) || 1)),
+      fateChance: fateChance(save)
+    };
   }
 
-  function consumeOfflineProgress() {
+  function validPending(value) {
+    return Boolean(
+      value &&
+      value.version === 1 &&
+      value.report &&
+      Number(value.report.gain) > 0 &&
+      Number(value.report.rolls) > 0
+    );
+  }
+
+  function prepareOfflineClaim() {
     try {
+      const existing = readJson(localStorage, PENDING_KEY);
+      if (validPending(existing)) return existing;
+      if (existing) nativeRemove(localStorage, PENDING_KEY);
+
       const now = Date.now();
       let save = readJson(localStorage, SAVE_KEY);
       const snapshot = readJson(localStorage, SNAPSHOT_KEY);
@@ -308,25 +337,41 @@
       if (!save) return null;
 
       const report = calculateOffline(save, now, departureTimestamp);
-      if (report) {
-        save.points = Math.max(0, Number(save.points) || 0) + report.gain;
-        save.runPointsEarned = Math.max(0, Number(save.runPointsEarned ?? save.totalEarned) || 0) + report.gain;
-        save.totalRolls = Math.max(0, Math.floor(Number(save.totalRolls) || 0)) + report.rolls;
-      }
 
-      // Consomme immédiatement la période afin qu'un refresh ne puisse pas redonner le même revenu.
-      writeSave(save, now);
-      return report;
+      // La période est consommée maintenant pour éviter tout double calcul au refresh,
+      // mais les Points restent volontairement non crédités jusqu'au bouton OK.
+      if (!writeSave(save, now)) return null;
+      if (!report) return null;
+
+      const pending = {
+        version: 1,
+        createdAt: now,
+        report
+      };
+      nativeWrite(localStorage, PENDING_KEY, JSON.stringify(pending));
+      return pending;
     } catch (error) {
-      console.error("[Night Idle] Le revenu hors ligne a été ignoré pour préserver le boot.", error);
+      console.error("[Night Idle] Préparation du revenu hors ligne impossible", error);
       return null;
     }
   }
 
-  const offlineReport = consumeOfflineProgress();
+  let pendingClaim = prepareOfflineClaim();
+  let claimInProgress = false;
+  let resolveOfflineReady;
 
-  // Ajoute automatiquement un timestamp à toutes les futures sauvegardes sans modifier game.js.
-  // Le patch est volontairement protégé : s'il est refusé par un navigateur, le jeu continue quand même.
+  window.NightIdleOfflineReady = new Promise((resolve) => {
+    resolveOfflineReady = resolve;
+  });
+
+  function finishOfflineBoot(payload = null) {
+    if (!resolveOfflineReady) return;
+    const resolve = resolveOfflineReady;
+    resolveOfflineReady = null;
+    resolve(payload);
+  }
+
+  // Timestamp automatique sur toutes les futures sauvegardes.
   if (storageProto && nativeSetItem) {
     try {
       storageProto.setItem = function patchedSetItem(key, value) {
@@ -344,11 +389,12 @@
         return nativeSetItem.call(this, key, value);
       };
     } catch (error) {
-      console.warn("[Night Idle] Timestamp automatique indisponible, fallback pagehide actif.", error);
+      console.warn("[Night Idle] Timestamp automatique indisponible", error);
     }
   }
 
   function captureOfflineSnapshot() {
+    if (pendingClaim) return;
     try {
       const save = readJson(localStorage, SAVE_KEY);
       if (!save) return;
@@ -370,6 +416,8 @@
   }
 
   document.addEventListener("visibilitychange", () => {
+    if (pendingClaim) return;
+
     if (document.hidden) {
       captureOfflineSnapshot();
       return;
@@ -384,7 +432,6 @@
       autoClickInterval(snapshot.save) > 0 &&
       offlineEfficiency(snapshot.save) > 0
     ) {
-      // Le reload fait recalculer la période depuis le snapshot, une seule fois.
       writeSave(snapshot.save, Number(snapshot.hiddenAt));
       clearSnapshot();
       window.location.reload();
@@ -397,11 +444,11 @@
   window.addEventListener("pagehide", captureOfflineSnapshot);
 
   function formatNumber(value) {
-    return new Intl.NumberFormat("fr-CH", { maximumFractionDigits: 2 }).format(value || 0);
+    return new Intl.NumberFormat("fr-CH", { maximumFractionDigits: 2 }).format(Number(value) || 0);
   }
 
   function formatDuration(ms) {
-    const totalMinutes = Math.max(0, Math.floor(ms / 60000));
+    const totalMinutes = Math.max(0, Math.floor((Number(ms) || 0) / 60000));
     const days = Math.floor(totalMinutes / 1440);
     const hours = Math.floor((totalMinutes % 1440) / 60);
     const minutes = totalMinutes % 60;
@@ -414,6 +461,12 @@
 
   function formatReserveMinutes(minutes) {
     return formatDuration(minutes * 60000);
+  }
+
+  function formatCadence(intervalMs) {
+    const ms = Math.max(1, Number(intervalMs) || 1);
+    if (ms >= 1000) return `1 lancer / ${formatNumber(ms / 1000)} s`;
+    return `${formatNumber(1000 / ms)} lancers / s`;
   }
 
   function patchPrestigeShopLabels() {
@@ -447,8 +500,6 @@
     });
   }
 
-  // Important : on déconnecte l'observer pendant le patch.
-  // L'ancienne version observait puis réécrivait son propre subtree en boucle infinie.
   function installSafeShopObserver() {
     const list = document.getElementById("prestigeShopList");
     if (!list || typeof MutationObserver === "undefined") return;
@@ -473,10 +524,28 @@
     });
   }
 
-  function showOfflineReport(report) {
-    if (!report) return;
+  function ensureDetailRow(grid, id, label) {
+    let value = document.getElementById(id);
+    if (value) return value;
+    const row = document.createElement("div");
+    row.innerHTML = `<span>${label}</span><strong id="${id}">—</strong>`;
+    grid.appendChild(row);
+    return row.querySelector("strong");
+  }
+
+  function showOfflineReport(pending) {
+    if (!validPending(pending)) {
+      finishOfflineBoot(null);
+      return;
+    }
+
+    const report = pending.report;
     const modal = document.getElementById("offlineModal");
-    if (!modal) return;
+    if (!modal) {
+      console.warn("[Night Idle] Modale offline absente : revenu conservé en attente.");
+      finishOfflineBoot(null);
+      return;
+    }
 
     const setText = (id, value) => {
       const node = document.getElementById(id);
@@ -491,27 +560,86 @@
     setText("offlineRollsValue", formatNumber(report.rolls));
     setText("offlineAverageValue", formatNumber(report.averageGain));
 
-    const close = () => {
-      if (modal.open) modal.close();
+    const grid = modal.querySelector(".offline-grid");
+    if (grid) {
+      ensureDetailRow(grid, "offlineCadenceValue", "Cadence Auto Clicker").textContent = formatCadence(report.intervalMs);
+      ensureDetailRow(grid, "offlineDiceValue", "Dés actifs").textContent = `${report.diceCount}/${CONFIG.maxDice}`;
+      ensureDetailRow(grid, "offlineFateValue", "Chance du Destin").textContent = `${formatNumber(report.fateChance * 100)} %`;
+    }
+
+    const note = modal.querySelector(".offline-note");
+    if (note) {
+      note.innerHTML = `
+        <strong>Calcul :</strong> ${formatNumber(report.rolls)} auto-lancers × ${formatNumber(report.averageGain)} pts moyens × ${formatNumber(report.efficiency * 100)} % d'efficacité = <strong>${formatNumber(report.gain)} pts</strong>.<br>
+        Les probabilités réelles des combos et Chance du Destin sont incluses. <strong>Ces Points sont encore en attente et seront ajoutés seulement après validation.</strong>
+      `;
+    }
+
+    const closeButton = document.getElementById("closeOfflineButton");
+    if (closeButton) {
+      closeButton.hidden = true;
+      closeButton.disabled = true;
+    }
+
+    const claimButton = document.getElementById("claimOfflineButton");
+    if (claimButton) {
+      claimButton.textContent = `OK — RÉCUPÉRER +${formatNumber(report.gain)} PTS`;
+    }
+
+    modal.addEventListener("cancel", (event) => event.preventDefault());
+
+    const claim = () => {
+      if (claimInProgress) return;
+      claimInProgress = true;
+      if (claimButton) {
+        claimButton.disabled = true;
+        claimButton.textContent = "CRÉDIT EN COURS…";
+      }
+
+      try {
+        const storedPending = readJson(localStorage, PENDING_KEY);
+        if (!validPending(storedPending)) {
+          pendingClaim = null;
+          if (modal.open) modal.close();
+          finishOfflineBoot(null);
+          return;
+        }
+
+        const save = readJson(localStorage, SAVE_KEY);
+        if (!save) throw new Error("Sauvegarde introuvable au moment du crédit.");
+
+        const reward = storedPending.report;
+        save.points = Math.max(0, Number(save.points) || 0) + reward.gain;
+        save.runPointsEarned = Math.max(0, Number(save.runPointsEarned ?? save.totalEarned) || 0) + reward.gain;
+        save.totalRolls = Math.max(0, Math.floor(Number(save.totalRolls) || 0)) + reward.rolls;
+
+        if (!writeSave(save, Date.now())) throw new Error("Impossible d'écrire la récompense dans la sauvegarde.");
+        nativeRemove(localStorage, PENDING_KEY);
+        pendingClaim = null;
+
+        if (modal.open) modal.close();
+        finishOfflineBoot(reward);
+      } catch (error) {
+        console.error("[Night Idle] Crédit offline impossible", error);
+        claimInProgress = false;
+        if (claimButton) {
+          claimButton.disabled = false;
+          claimButton.textContent = "ERREUR — RÉESSAYER";
+        }
+      }
     };
 
-    document.getElementById("closeOfflineButton")?.addEventListener("click", close, { once: true });
-    document.getElementById("claimOfflineButton")?.addEventListener("click", close, { once: true });
-    modal.addEventListener(
-      "click",
-      (event) => {
-        if (event.target === modal) close();
-      },
-      { once: true }
-    );
+    claimButton?.addEventListener("click", claim, { once: false });
 
     if (typeof modal.showModal === "function") modal.showModal();
+    else modal.setAttribute("open", "");
   }
 
   installSafeShopObserver();
 
   window.setTimeout(() => {
     patchPrestigeShopLabels();
-    showOfflineReport(offlineReport);
+    if (pendingClaim) showOfflineReport(pendingClaim);
+    else finishOfflineBoot(null);
   }, 0);
 })();
